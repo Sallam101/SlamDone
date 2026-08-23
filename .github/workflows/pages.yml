@@ -1,4 +1,4 @@
-name: Build and deploy SupeSlam PWA
+name: Build and deploy SlamDone PWA
 
 on:
   push:
@@ -32,18 +32,12 @@ jobs:
         run: flutter pub get
 
       - name: Create web platform shell
-        run: flutter create --platforms=web --project-name=supeslam .
-        
-      - name: Remove generated Flutter template test
-        run: |
-          if [ -f test/widget_test.dart ] && grep -q 'MyApp' test/widget_test.dart; then
-            rm test/widget_test.dart
-          fi
+        run: flutter create --platforms=web --project-name=slamdone .
 
       - name: Install browser SQLite WASM assets
         run: dart run sqflite_common_ffi_web:setup --force
 
-      - name: Apply SupeSlam PWA branding
+      - name: Apply SlamDone PWA branding
         run: python3 tools/brand_web.py
 
       - name: Run repository contract tests
@@ -54,7 +48,7 @@ jobs:
 
       - name: Build Flutter web
         run: |
-          flutter build web --release --base-href /SupeSlam/ \
+          flutter build web --release --base-href /SlamDone/ \
             --dart-define=FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }} \
             --dart-define=FIREBASE_AUTH_DOMAIN=${{ vars.FIREBASE_AUTH_DOMAIN }} \
             --dart-define=FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }} \
