@@ -1,0 +1,9 @@
+SlamDone V7.5.1 Big Picture Filter Toolbar Fix
+
+1. Extract this ZIP.
+2. Upload the CONTENTS into the root of your existing Sallam101/SlamDone GitHub repository.
+3. Preserve the folders exactly (lib/src/screens and tool_tests).
+4. Commit directly to main.
+5. GitHub Actions will build/deploy automatically.
+
+This patch does NOT include or change your database, Firebase config values, migration JSON, card renderer files, hierarchy layout files, or canvas card structure.

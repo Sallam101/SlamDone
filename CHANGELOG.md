@@ -1,3 +1,9 @@
+## 7.5.1 - 2026-08-23
+- Big Picture filter controls can now be fully collapsed behind a single Filters button while Structured/Free Canvas and + Goal remain visible.
+- Active, Completed, and Archived remain independent status toggles; All is now a one-click show-all shortcut.
+- Filter-panel visibility is remembered in SlamDone UI settings.
+- Card hierarchy, card renderers, canvas layout, connectors, sizing, and drag behavior are unchanged from V7.5.0.
+
 # SlamDone Changelog
 
 ## V7.5.0 — 2026-08-23

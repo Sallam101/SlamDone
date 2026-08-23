@@ -18,7 +18,9 @@ class BigPictureScreen extends StatefulWidget {
 }
 
 class _BigPictureScreenState extends State<BigPictureScreen> {
-  bool _filtersVisible = false;
+  bool _filterBarVisible = false;
+  bool _advancedFiltersVisible = false;
+  bool _filterPreferenceLoaded = false;
   bool _freeCanvas = false;
   WorkItemType? _levelFilter;
   PriorityLevel? _priorityFilter;
@@ -28,6 +30,19 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
     WorkStatus.active,
     WorkStatus.completed,
   };
+
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_filterPreferenceLoaded) return;
+    _filterPreferenceLoaded = true;
+    final controller = AppScope.of(context);
+    controller.readUiSetting('big_picture_filters_visible').then((saved) {
+      if (!mounted || saved == null) return;
+      setState(() => _filterBarVisible = saved == 'true');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,49 +163,17 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                         onSelectionChanged: (value) =>
                             setState(() => _freeCanvas = value.first),
                       ),
-                      _statusChip(
-                        label: const Text('Active'),
-                        icon: Icons.play_circle_outline,
-                        status: WorkStatus.active,
-                        count: controller.workItems
-                            .where((item) => !item.isDeleted && item.status == WorkStatus.active)
-                            .length,
-                      ),
-                      _statusChip(
-                        label: const Text('Completed'),
-                        icon: Icons.check_circle_outline,
-                        status: WorkStatus.completed,
-                        count: controller.workItems
-                            .where((item) => !item.isDeleted && item.status == WorkStatus.completed)
-                            .length,
-                      ),
-                      _statusChip(
-                        label: const Text('Archived'),
-                        icon: Icons.archive_outlined,
-                        status: WorkStatus.archived,
-                        count: controller.workItems
-                            .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
-                            .length,
-                      ),
-                      FilterChip(
-                        avatar: const Icon(Icons.select_all, size: 17),
-                        label: const Text('All'),
-                        selected: _visibleStatuses.length == WorkStatus.values.length,
-                        onSelected: (selected) => setState(() {
-                          _visibleStatuses = selected
-                              ? WorkStatus.values.toSet()
-                              : <WorkStatus>{WorkStatus.active, WorkStatus.completed};
-                        }),
-                      ),
                       FilledButton.tonalIcon(
-                        onPressed: () =>
-                            setState(() => _filtersVisible = !_filtersVisible),
-                        icon: Icon(
-                          _filtersVisible
-                              ? Icons.filter_alt_off
-                              : Icons.tune,
+                        onPressed: () => _setFilterBarVisible(
+                          controller,
+                          !_filterBarVisible,
                         ),
-                        label: Text(_filtersVisible ? 'Hide filters' : 'More filters'),
+                        icon: Icon(
+                          _filterBarVisible
+                              ? Icons.filter_alt_off
+                              : Icons.filter_alt_outlined,
+                        ),
+                        label: Text(_filterBarVisible ? 'Hide filters' : 'Filters'),
                       ),
                       FilledButton.icon(
                         onPressed: () =>
@@ -202,7 +185,59 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 180),
-                    child: !_filtersVisible
+                    child: !_filterBarVisible
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                _statusChip(
+                                  label: const Text('Active'),
+                                  icon: Icons.play_circle_outline,
+                                  status: WorkStatus.active,
+                                  count: controller.workItems
+                                      .where((item) => !item.isDeleted && item.status == WorkStatus.active)
+                                      .length,
+                                ),
+                                _statusChip(
+                                  label: const Text('Completed'),
+                                  icon: Icons.check_circle_outline,
+                                  status: WorkStatus.completed,
+                                  count: controller.workItems
+                                      .where((item) => !item.isDeleted && item.status == WorkStatus.completed)
+                                      .length,
+                                ),
+                                _statusChip(
+                                  label: const Text('Archived'),
+                                  icon: Icons.archive_outlined,
+                                  status: WorkStatus.archived,
+                                  count: controller.workItems
+                                      .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
+                                      .length,
+                                ),
+                                ActionChip(
+                                  avatar: const Icon(Icons.select_all, size: 17),
+                                  label: const Text('All'),
+                                  onPressed: _showAllStatuses,
+                                ),
+                                FilterChip(
+                                  avatar: const Icon(Icons.tune, size: 17),
+                                  label: const Text('More filters'),
+                                  selected: _advancedFiltersVisible,
+                                  onSelected: (value) => setState(
+                                    () => _advancedFiltersVisible = value,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 180),
+                    child: !_advancedFiltersVisible
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 12),
@@ -386,6 +421,23 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _setFilterBarVisible(
+    AppController controller,
+    bool value,
+  ) async {
+    setState(() {
+      _filterBarVisible = value;
+      if (!value) _advancedFiltersVisible = false;
+    });
+    await controller.writeUiSetting('big_picture_filters_visible', value.toString());
+  }
+
+  void _showAllStatuses() {
+    setState(() {
+      _visibleStatuses = WorkStatus.values.toSet();
+    });
   }
 
   Widget _statusChip({
