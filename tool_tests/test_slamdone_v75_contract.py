@@ -55,7 +55,7 @@ class SlamDoneV75ContractTest(unittest.TestCase):
 
     def test_version_is_v75_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version: 7\.(?:[6-9]|5\.[0-9]+)\.[0-9]+\+[0-9]+')
+        self.assertRegex(pubspec, r'version: 7\.(?:10|[6-9]|5\.[0-9]+)\.[0-9]+\+[0-9]+')
 
 
 if __name__ == '__main__':

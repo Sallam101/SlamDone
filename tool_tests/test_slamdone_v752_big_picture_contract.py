@@ -58,7 +58,7 @@ class SlamDoneV752BigPictureContractTest(unittest.TestCase):
             self.assertEqual(self.sha256(path), digest, path)
 
     def test_version_is_v752_or_later(self):
-        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.(?:[6-9]|5\.[2-9])\.[0-9]+\+[0-9]+')
+        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.(?:10|[6-9]|5\.[2-9])\.[0-9]+\+[0-9]+')
 
 
 if __name__ == '__main__':

@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
+import '../services/overview_export_service.dart';
 import '../utils/app_utils.dart';
 
 class OverviewScreen extends StatefulWidget {
@@ -14,67 +16,52 @@ class OverviewScreen extends StatefulWidget {
   State<OverviewScreen> createState() => _OverviewScreenState();
 }
 
+enum _OverviewPeriod { week, month, quarter, year }
+
 class _OverviewScreenState extends State<OverviewScreen> {
   DateTime _anchor = DateTime.now();
-  bool _monthly = false;
+  _OverviewPeriod _period = _OverviewPeriod.week;
 
   static const _palettes = <List<Color>>[
     [
-      Color(0xFF6750A4),
-      Color(0xFF00897B),
-      Color(0xFFFF8F00),
-      Color(0xFF5E35B1),
-      Color(0xFF43A047),
-      Color(0xFFE53935),
+      Color(0xFF6750A4), Color(0xFF00897B), Color(0xFFFF8F00),
+      Color(0xFF5E35B1), Color(0xFF43A047), Color(0xFFE53935),
+      Color(0xFF1565C0), Color(0xFF00ACC1), Color(0xFFF9A825),
+      Color(0xFFD81B60), Color(0xFF7CB342), Color(0xFF546E7A),
     ],
     [
-      Color(0xFF1565C0),
-      Color(0xFF00ACC1),
-      Color(0xFF7CB342),
-      Color(0xFFF9A825),
-      Color(0xFF8E24AA),
-      Color(0xFFEF5350),
+      Color(0xFF1565C0), Color(0xFF00ACC1), Color(0xFF7CB342),
+      Color(0xFFF9A825), Color(0xFF8E24AA), Color(0xFFEF5350),
+      Color(0xFF3949AB), Color(0xFF00897B), Color(0xFFFF7043),
+      Color(0xFFAB47BC), Color(0xFF43A047), Color(0xFF5C6BC0),
     ],
     [
-      Color(0xFF00695C),
-      Color(0xFF2E7D32),
-      Color(0xFF558B2F),
-      Color(0xFFF57F17),
-      Color(0xFFE65100),
-      Color(0xFF6A1B9A),
+      Color(0xFF00695C), Color(0xFF2E7D32), Color(0xFF558B2F),
+      Color(0xFFF57F17), Color(0xFFE65100), Color(0xFF6A1B9A),
+      Color(0xFF0277BD), Color(0xFF00838F), Color(0xFFF9A825),
+      Color(0xFFC2185B), Color(0xFF689F38), Color(0xFF455A64),
     ],
     [
-      Color(0xFF283593),
-      Color(0xFF00838F),
-      Color(0xFFAD1457),
-      Color(0xFFEF6C00),
-      Color(0xFF4527A0),
-      Color(0xFF2E7D32),
+      Color(0xFF283593), Color(0xFF00838F), Color(0xFFAD1457),
+      Color(0xFFEF6C00), Color(0xFF4527A0), Color(0xFF2E7D32),
+      Color(0xFF1976D2), Color(0xFF0097A7), Color(0xFFFBC02D),
+      Color(0xFFE91E63), Color(0xFF8BC34A), Color(0xFF607D8B),
     ],
     [
-      Color(0xFF455A64),
-      Color(0xFF546E7A),
-      Color(0xFF5D4037),
-      Color(0xFF6D4C41),
-      Color(0xFF37474F),
-      Color(0xFF7E57C2),
+      Color(0xFF455A64), Color(0xFF546E7A), Color(0xFF5D4037),
+      Color(0xFF6D4C41), Color(0xFF37474F), Color(0xFF7E57C2),
+      Color(0xFF3F51B5), Color(0xFF009688), Color(0xFFFFA000),
+      Color(0xFFEC407A), Color(0xFF7CB342), Color(0xFF78909C),
     ],
   ];
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final currentRange = _periodRange(_anchor, monthly: _monthly);
-    final previousAnchor = _monthly
-        ? DateTime(_anchor.year, _anchor.month - 1, 1)
-        : _anchor.subtract(const Duration(days: 7));
-    final previousRange = _periodRange(previousAnchor, monthly: _monthly);
-    final sessionTarget = _monthly
-        ? controller.monthlySessionGoal
-        : controller.weeklySessionGoal;
-    final sessionMinutes = _monthly
-        ? controller.monthlySessionMinutes
-        : controller.weeklySessionMinutes;
+    final currentRange = _periodRange(_anchor, _period);
+    final previousRange = _periodRange(_previousAnchor(_anchor, _period), _period);
+    final sessionTarget = _sessionGoalForPeriod(controller, _period);
+    final sessionMinutes = _sessionMinutesForPeriod(controller, _period);
     final current = _buildStats(
       controller.workItems,
       controller.sessions,
@@ -93,10 +80,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
       sessionTarget: sessionTarget,
       sessionMinutes: sessionMinutes,
     );
-    final palette =
-        _palettes[controller.dashboardPaletteIndex
-            .clamp(0, _palettes.length - 1)
-            .toInt()];
+    final palette = _palettes[controller.dashboardPaletteIndex
+        .clamp(0, _palettes.length - 1)
+        .toInt()];
     final dailyTrend = _buildDailyTrend(
       controller.workItems,
       controller.sessions,
@@ -108,6 +94,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
       controller.sessions,
       currentRange,
     );
+    final hierarchyItems = <WorkItemType, List<WorkItem>>{
+      for (final type in WorkItemType.values)
+        type: _completedHierarchyItems(controller.workItems, currentRange, type),
+    };
+    final hierarchyTrends = <WorkItemType, List<_HierarchyTrendPoint>>{
+      for (final type in WorkItemType.values)
+        type: _buildHierarchyTrend(controller.workItems, currentRange, _period, type),
+    };
 
     return ListView(
       padding: const EdgeInsets.all(18),
@@ -128,18 +122,25 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     'Overview Dashboard',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  Text(_periodLabel(currentRange, monthly: _monthly)),
+                  Text(_periodLabel(currentRange, _period)),
                 ],
               ),
             ),
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Week')),
-                ButtonSegment(value: true, label: Text('Month')),
-              ],
-              selected: {_monthly},
-              onSelectionChanged: (value) =>
-                  setState(() => _monthly = value.first),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<_OverviewPeriod>(
+                segments: const [
+                  ButtonSegment(value: _OverviewPeriod.week, label: Text('Week')),
+                  ButtonSegment(value: _OverviewPeriod.month, label: Text('Month')),
+                  ButtonSegment(value: _OverviewPeriod.quarter, label: Text('Quarter')),
+                  ButtonSegment(value: _OverviewPeriod.year, label: Text('Year')),
+                ],
+                selected: {_period},
+                onSelectionChanged: (value) => setState(() {
+                  _period = value.first;
+                  _anchor = DateTime.now();
+                }),
+              ),
             ),
             PopupMenuButton<int>(
               tooltip: 'Dashboard colors',
@@ -172,13 +173,27 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 label: Text('Colors'),
               ),
             ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await _exportOverview(
+                  context,
+                  controller: controller,
+                  range: currentRange,
+                  current: current,
+                  previous: previous,
+                  previousRange: previousRange,
+                  dailyTrend: dailyTrend,
+                  projectFocus: projectFocus,
+                  hierarchyItems: hierarchyItems,
+                  hierarchyTrends: hierarchyTrends,
+                );
+              },
+              icon: const Icon(Icons.table_view_outlined),
+              label: const Text('Export Overview'),
+            ),
             IconButton(
               tooltip: 'Previous',
-              onPressed: () => setState(
-                () => _anchor = _monthly
-                    ? DateTime(_anchor.year, _anchor.month - 1)
-                    : _anchor.subtract(const Duration(days: 7)),
-              ),
+              onPressed: () => setState(() => _anchor = _shiftAnchor(_anchor, _period, -1)),
               icon: const Icon(Icons.chevron_left),
             ),
             IconButton(
@@ -188,11 +203,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
             ),
             IconButton(
               tooltip: 'Next',
-              onPressed: () => setState(
-                () => _anchor = _monthly
-                    ? DateTime(_anchor.year, _anchor.month + 1)
-                    : _anchor.add(const Duration(days: 7)),
-              ),
+              onPressed: () => setState(() => _anchor = _shiftAnchor(_anchor, _period, 1)),
               icon: const Icon(Icons.chevron_right),
             ),
           ],
@@ -298,6 +309,54 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 ],
               ),
             ),
+            _MetricCard(
+              color: palette[6],
+              icon: Icons.flag_outlined,
+              title: 'Goals completed',
+              value: '${hierarchyItems[WorkItemType.goal]!.length}',
+              detail: 'completed this ${_period.name}',
+              onTap: () => _showHierarchyDrillDown(context, 'Goals completed', hierarchyItems[WorkItemType.goal]!),
+            ),
+            _MetricCard(
+              color: palette[7],
+              icon: Icons.assistant_photo_outlined,
+              title: 'Milestones completed',
+              value: '${hierarchyItems[WorkItemType.milestone]!.length}',
+              detail: 'completed this ${_period.name}',
+              onTap: () => _showHierarchyDrillDown(context, 'Milestones completed', hierarchyItems[WorkItemType.milestone]!),
+            ),
+            _MetricCard(
+              color: palette[8],
+              icon: Icons.account_tree_outlined,
+              title: 'Projects completed',
+              value: '${hierarchyItems[WorkItemType.project]!.length}',
+              detail: 'completed this ${_period.name}',
+              onTap: () => _showHierarchyDrillDown(context, 'Projects completed', hierarchyItems[WorkItemType.project]!),
+            ),
+            _MetricCard(
+              color: palette[9],
+              icon: Icons.hub_outlined,
+              title: 'Subprojects completed',
+              value: '${hierarchyItems[WorkItemType.subproject]!.length}',
+              detail: 'completed this ${_period.name}',
+              onTap: () => _showHierarchyDrillDown(context, 'Subprojects completed', hierarchyItems[WorkItemType.subproject]!),
+            ),
+            _MetricCard(
+              color: palette[10],
+              icon: Icons.view_module_outlined,
+              title: 'Modules completed',
+              value: '${hierarchyItems[WorkItemType.module]!.length}',
+              detail: 'completed this ${_period.name}',
+              onTap: () => _showHierarchyDrillDown(context, 'Modules completed', hierarchyItems[WorkItemType.module]!),
+            ),
+            _MetricCard(
+              color: palette[11],
+              icon: Icons.checklist_outlined,
+              title: 'Tasks completed',
+              value: '${hierarchyItems[WorkItemType.task]!.length}',
+              detail: 'completed this ${_period.name}',
+              onTap: () => _showHierarchyDrillDown(context, 'Tasks completed', hierarchyItems[WorkItemType.task]!),
+            ),
           ],
         ),
         const SizedBox(height: 18),
@@ -332,18 +391,29 @@ class _OverviewScreenState extends State<OverviewScreen> {
         const SizedBox(height: 18),
         _DailyTrendChart(points: dailyTrend, colors: palette),
         const SizedBox(height: 18),
+        _HierarchyCompletionTrends(
+          trends: hierarchyTrends,
+          colors: palette.sublist(6, 12),
+          period: _period,
+          onOpenDetails: (type) => _showHierarchyDrillDown(
+            context,
+            '${_hierarchyPluralLabel(type)} completed',
+            hierarchyItems[type] ?? const <WorkItem>[],
+          ),
+        ),
+        const SizedBox(height: 18),
         _ProjectFocusBreakdown(items: projectFocus, color: palette[1]),
         const SizedBox(height: 18),
         _PerformanceCharts(
           current: current,
           colors: palette,
-          periodLabel: _monthly ? 'month' : 'week',
+          periodLabel: _period.name,
         ),
         const SizedBox(height: 18),
         _GoalComparisonBars(
           current: current,
           colors: palette,
-          periodLabel: _monthly ? 'month' : 'week',
+          periodLabel: _period.name,
         ),
         const SizedBox(height: 18),
         Card(
@@ -353,14 +423,12 @@ class _OverviewScreenState extends State<OverviewScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _monthly
-                      ? 'Current vs previous • month'
-                      : 'Current vs previous • week',
+                  'Current vs previous • ${_period.name}',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Horizontal paired bars compare the selected ${_monthly ? 'month' : 'week'} with the previous period for every metric.',
+                  'Horizontal paired bars compare the selected ${_period.name} with the previous period for every metric.',
                   softWrap: true,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
@@ -484,21 +552,141 @@ class _OverviewScreenState extends State<OverviewScreen> {
     );
   }
 
-  _PeriodRange _periodRange(DateTime anchor, {required bool monthly}) {
-    final start = monthly
-        ? DateTime(anchor.year, anchor.month)
-        : startOfIsoWeek(anchor);
-    final end = monthly
-        ? DateTime(anchor.year, anchor.month + 1)
-        : start.add(const Duration(days: 7));
-    return _PeriodRange(start, end);
+  _PeriodRange _periodRange(DateTime anchor, _OverviewPeriod period) {
+    switch (period) {
+      case _OverviewPeriod.week:
+        final start = startOfIsoWeek(anchor);
+        return _PeriodRange(start, start.add(const Duration(days: 7)));
+      case _OverviewPeriod.month:
+        final start = DateTime(anchor.year, anchor.month);
+        return _PeriodRange(start, DateTime(anchor.year, anchor.month + 1));
+      case _OverviewPeriod.quarter:
+        final startMonth = ((anchor.month - 1) ~/ 3) * 3 + 1;
+        final start = DateTime(anchor.year, startMonth);
+        return _PeriodRange(start, DateTime(anchor.year, startMonth + 3));
+      case _OverviewPeriod.year:
+        final start = DateTime(anchor.year);
+        return _PeriodRange(start, DateTime(anchor.year + 1));
+    }
   }
 
-  String _periodLabel(_PeriodRange range, {required bool monthly}) {
-    if (monthly) return '${_monthName(range.start.month)} ${range.start.year}';
-    return 'Week ${isoWeekNumber(range.start)} • '
-        '${dateKey(range.start)} to '
-        '${dateKey(range.end.subtract(const Duration(days: 1)))}';
+  DateTime _shiftAnchor(DateTime anchor, _OverviewPeriod period, int amount) => switch (period) {
+    _OverviewPeriod.week => anchor.add(Duration(days: 7 * amount)),
+    _OverviewPeriod.month => DateTime(anchor.year, anchor.month + amount, 1),
+    _OverviewPeriod.quarter => DateTime(anchor.year, anchor.month + 3 * amount, 1),
+    _OverviewPeriod.year => DateTime(anchor.year + amount, anchor.month, 1),
+  };
+
+  DateTime _previousAnchor(DateTime anchor, _OverviewPeriod period) =>
+      _shiftAnchor(anchor, period, -1);
+
+  int _sessionGoalForPeriod(AppController controller, _OverviewPeriod period) => switch (period) {
+    _OverviewPeriod.week => controller.weeklySessionGoal,
+    _OverviewPeriod.month => controller.monthlySessionGoal,
+    _OverviewPeriod.quarter => controller.monthlySessionGoal * 3,
+    _OverviewPeriod.year => controller.monthlySessionGoal * 12,
+  };
+
+  int _sessionMinutesForPeriod(AppController controller, _OverviewPeriod period) => switch (period) {
+    _OverviewPeriod.week => controller.weeklySessionMinutes,
+    _OverviewPeriod.month => controller.monthlySessionMinutes,
+    _OverviewPeriod.quarter => controller.monthlySessionMinutes,
+    _OverviewPeriod.year => controller.monthlySessionMinutes,
+  };
+
+  String _periodLabel(_PeriodRange range, _OverviewPeriod period) => switch (period) {
+    _OverviewPeriod.week => 'Week ${isoWeekNumber(range.start)} • ${dateKey(range.start)} to ${dateKey(range.end.subtract(const Duration(days: 1)))}',
+    _OverviewPeriod.month => '${_monthName(range.start.month)} ${range.start.year}',
+    _OverviewPeriod.quarter => 'Q${((range.start.month - 1) ~/ 3) + 1} ${range.start.year} • ${_monthName(range.start.month)} to ${_monthName(range.end.subtract(const Duration(days: 1)).month)}',
+    _OverviewPeriod.year => '${range.start.year}',
+  };
+
+  Future<void> _showHierarchyDrillDown(
+    BuildContext context,
+    String title,
+    List<WorkItem> items,
+  ) => _showMetricDrillDown(
+    context,
+    title,
+    items
+        .map((item) => '${item.title} • ${_hierarchySingularLabel(item.type)} • ${item.status.name} • ${DateFormat('EEE, MMM d, y').format(item.updatedAt.toLocal())}')
+        .toList(),
+  );
+
+  Future<void> _exportOverview(
+    BuildContext context, {
+    required AppController controller,
+    required _PeriodRange range,
+    required _PeriodStats current,
+    required _PeriodStats previous,
+    required _PeriodRange previousRange,
+    required List<_DailyTrendPoint> dailyTrend,
+    required List<_ProjectFocus> projectFocus,
+    required Map<WorkItemType, List<WorkItem>> hierarchyItems,
+    required Map<WorkItemType, List<_HierarchyTrendPoint>> hierarchyTrends,
+  }) async {
+    final summaryRows = <List<String>>[
+      ['Selected period', _periodLabel(range, _period), _period.name],
+      ['Items completed', '${current.completedItems}', '${current.completedDueItems} dated items finished'],
+      ['Deep focus', '${current.focusMinutes}', 'minutes'],
+      ['Focus streak', '${controller.focusDayStreak}', '${controller.todaySessionCount} sessions today'],
+      ['Completed focus sessions', '${current.completedSessions}', 'sessions'],
+      ['Goals and milestones hit', '${current.goalsHit}', '${current.goalTarget} due targets'],
+      ['Habit progress', '${(current.habitProgress * 100).round()}%', '${current.habitCheckIns} positive check-ins'],
+      ['Reward points', '${controller.totalRewardPoints}', controller.currentRewardRank?.name ?? 'Not ranked yet'],
+      for (final type in WorkItemType.values)
+        ['${_hierarchyPluralLabel(type)} completed', '${hierarchyItems[type]?.length ?? 0}', 'completed in selected ${_period.name}'],
+    ];
+    final comparisonRows = <List<String>>[
+      ['Dated work completed', '${current.completedDueItems}', '${previous.completedDueItems}', '${current.itemTarget}', '${previous.itemTarget}'],
+      ['Focus minutes', '${current.focusMinutes}', '${previous.focusMinutes}', '${current.focusMinuteTarget}', '${previous.focusMinuteTarget}'],
+      ['Completed focus sessions', '${current.completedSessions}', '${previous.completedSessions}', '${current.sessionTarget}', '${previous.sessionTarget}'],
+      ['Goals and milestones hit', '${current.goalsHit}', '${previous.goalsHit}', '${current.goalTarget}', '${previous.goalTarget}'],
+      ['Habit goal-equivalents', current.habitGoalEquivalent.toStringAsFixed(2), previous.habitGoalEquivalent.toStringAsFixed(2), current.habitTarget.toStringAsFixed(2), previous.habitTarget.toStringAsFixed(2)],
+      ['Previous period', _periodLabel(previousRange, _period), '', '', ''],
+    ];
+    final completedRows = <List<String>>[];
+    for (final type in WorkItemType.values) {
+      for (final item in hierarchyItems[type] ?? const <WorkItem>[]) {
+        completedRows.add([
+          _hierarchySingularLabel(type),
+          item.title,
+          item.status.name,
+          DateFormat('yyyy-MM-dd').format(item.updatedAt.toLocal()),
+          item.parentId ?? '',
+        ]);
+      }
+    }
+    final trendRows = <List<String>>[];
+    final baseTrend = hierarchyTrends[WorkItemType.goal] ?? const <_HierarchyTrendPoint>[];
+    for (var index = 0; index < baseTrend.length; index++) {
+      trendRows.add([
+        baseTrend[index].label,
+        for (final type in WorkItemType.values)
+          '${(hierarchyTrends[type] ?? const <_HierarchyTrendPoint>[])[index].count}',
+      ]);
+    }
+    final path = await OverviewExportService.export(
+      periodLabel: _periodLabel(range, _period),
+      summaryRows: summaryRows,
+      comparisonRows: comparisonRows,
+      hierarchyCompletedRows: completedRows,
+      hierarchyTrendRows: trendRows,
+      dailyTrendRows: dailyTrend
+          .map((point) => [
+                DateFormat('yyyy-MM-dd').format(point.day),
+                '${point.focusMinutes}',
+                '${point.completedItems}',
+                '${point.habitCheckIns}',
+                '${point.goalsHit}',
+              ])
+          .toList(),
+      projectFocusRows: projectFocus.map((item) => [item.title, '${item.minutes}']).toList(),
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(path == null ? 'Overview export canceled.' : 'Overview Excel exported.')),
+    );
   }
 
   String _ratioLabel(int actual, int target, {required String suffix}) {
@@ -627,6 +815,222 @@ class _PeriodRange {
   const _PeriodRange(this.start, this.end);
   final DateTime start;
   final DateTime end;
+}
+
+String _hierarchySingularLabel(WorkItemType type) => switch (type) {
+  WorkItemType.goal => 'Goal',
+  WorkItemType.milestone => 'Milestone',
+  WorkItemType.project => 'Project',
+  WorkItemType.subproject => 'Subproject',
+  WorkItemType.module => 'Module',
+  WorkItemType.task => 'Task',
+};
+
+String _hierarchyPluralLabel(WorkItemType type) => switch (type) {
+  WorkItemType.goal => 'Goals',
+  WorkItemType.milestone => 'Milestones',
+  WorkItemType.project => 'Projects',
+  WorkItemType.subproject => 'Subprojects',
+  WorkItemType.module => 'Modules',
+  WorkItemType.task => 'Tasks',
+};
+
+List<WorkItem> _completedHierarchyItems(
+  List<WorkItem> items,
+  _PeriodRange range,
+  WorkItemType type,
+) {
+  final output = items
+      .where((item) =>
+          !item.isDeleted &&
+          item.type == type &&
+          item.isCompleted &&
+          _inPeriod(item.updatedAt, range))
+      .toList()
+    ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  return output;
+}
+
+class _HierarchyTrendPoint {
+  const _HierarchyTrendPoint({
+    required this.label,
+    required this.start,
+    required this.end,
+    required this.count,
+  });
+  final String label;
+  final DateTime start;
+  final DateTime end;
+  final int count;
+}
+
+List<_PeriodRange> _trendBucketRange(
+  _PeriodRange range,
+  _OverviewPeriod period,
+) {
+  final buckets = <_PeriodRange>[];
+  if (period == _OverviewPeriod.year) {
+    for (var month = 1; month <= 12; month++) {
+      final start = DateTime(range.start.year, month);
+      buckets.add(_PeriodRange(start, DateTime(range.start.year, month + 1)));
+    }
+    return buckets;
+  }
+  final stepDays = period == _OverviewPeriod.quarter ? 7 : 1;
+  for (var start = range.start; start.isBefore(range.end); start = start.add(Duration(days: stepDays))) {
+    final candidateEnd = start.add(Duration(days: stepDays));
+    final end = candidateEnd.isAfter(range.end) ? range.end : candidateEnd;
+    buckets.add(_PeriodRange(start, end));
+  }
+  return buckets;
+}
+
+List<_HierarchyTrendPoint> _buildHierarchyTrend(
+  List<WorkItem> items,
+  _PeriodRange range,
+  _OverviewPeriod period,
+  WorkItemType type,
+) {
+  final buckets = _trendBucketRange(range, period);
+  return List.generate(buckets.length, (index) {
+    final bucket = buckets[index];
+    final count = items.where((item) =>
+        !item.isDeleted &&
+        item.type == type &&
+        item.isCompleted &&
+        _inPeriod(item.updatedAt, bucket)).length;
+    final label = switch (period) {
+      _OverviewPeriod.week => DateFormat('EEE').format(bucket.start),
+      _OverviewPeriod.month => DateFormat('MMM d').format(bucket.start),
+      _OverviewPeriod.quarter => 'W${index + 1}',
+      _OverviewPeriod.year => DateFormat('MMM').format(bucket.start),
+    };
+    return _HierarchyTrendPoint(label: label, start: bucket.start, end: bucket.end, count: count);
+  });
+}
+
+class _HierarchyCompletionTrends extends StatelessWidget {
+  const _HierarchyCompletionTrends({
+    required this.trends,
+    required this.colors,
+    required this.period,
+    required this.onOpenDetails,
+  });
+
+  final Map<WorkItemType, List<_HierarchyTrendPoint>> trends;
+  final List<Color> colors;
+  final _OverviewPeriod period;
+  final ValueChanged<WorkItemType> onOpenDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Hierarchy completion trends', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Text('Completed Goals, Milestones, Projects, Subprojects, Modules, and Tasks in the selected ${period.name}. Tap any graph for details.'),
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 1150
+                    ? 3
+                    : constraints.maxWidth >= 650
+                        ? 2
+                        : 1;
+                final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (var index = 0; index < WorkItemType.values.length; index++)
+                      SizedBox(
+                        width: width,
+                        child: _HierarchyTrendCard(
+                          type: WorkItemType.values[index],
+                          points: trends[WorkItemType.values[index]] ?? const <_HierarchyTrendPoint>[],
+                          color: colors[index],
+                          onTap: () => onOpenDetails(WorkItemType.values[index]),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HierarchyTrendCard extends StatelessWidget {
+  const _HierarchyTrendCard({
+    required this.type,
+    required this.points,
+    required this.color,
+    required this.onTap,
+  });
+
+  final WorkItemType type;
+  final List<_HierarchyTrendPoint> points;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = points.map((point) => point.count).toList();
+    final total = values.fold<int>(0, (sum, value) => sum + value);
+    return Material(
+      color: color.withValues(alpha: .07),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: .30)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${_hierarchyPluralLabel(type)} completed',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text('$total', style: TextStyle(fontWeight: FontWeight.w900, color: color)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 120,
+                child: CustomPaint(painter: _TrendPainter(values: values, color: color)),
+              ),
+              if (points.isNotEmpty)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(points.first.label, style: Theme.of(context).textTheme.labelSmall),
+                    Text(points.last.label, style: Theme.of(context).textTheme.labelSmall),
+                  ],
+                ),
+              const SizedBox(height: 4),
+              Text('Tap for completed ${_hierarchyPluralLabel(type).toLowerCase()}', style: Theme.of(context).textTheme.labelSmall),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PeriodStats {

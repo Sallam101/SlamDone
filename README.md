@@ -87,3 +87,7 @@ For a currently incomplete cloud, open SlamDone on the PC that has the full plan
 Designate the computer that contains the curated planner as **Settings → Make this my Primary PC**. During full repair SlamDone restores work items parent-first, then dependent layouts and focus sessions. The Primary PC is authoritative for structural planner fields while phone-created task IDs and newer completion/checklist progress remain additive and deduplicated by stable IDs.
 
 Tasks now includes compact toggles for **Active, Uncategorized, Completed, Archived, Urgent, Overdue, Due Today, This Week, and Undated**. Smart date/priority filters combine with OR semantics; search and hierarchy restrictions continue narrowing results. Filter preferences stay local to each device so the phone can keep a compact daily setup without changing the PC toolbar.
+
+
+## V7.10 Overview analytics
+Overview supports Week / Month / Quarter / Year, six clickable hierarchy completion KPIs and trends, palette colors, and a selected-period Excel export.

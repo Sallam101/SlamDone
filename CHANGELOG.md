@@ -1,3 +1,12 @@
+# SlamDone V7.10.0 — Overview Hierarchy Analytics + Excel
+
+- Expanded Overview period selection to Week, Month, Quarter, and Year with period-aware navigation and comparisons.
+- Added clickable completion KPI cards for Goals, Milestones, Projects, Subprojects, Modules, and Tasks.
+- Added six hierarchy completion trend charts with daily, weekly, or monthly buckets depending on the selected period.
+- Extended dashboard palettes from six to twelve colors so the new hierarchy analytics follow the existing color selector.
+- Added **Export Overview** multi-sheet Excel export for the selected period, including Summary, Hierarchy Completed, Hierarchy Trend, Daily Trend, and Focus by Project.
+- Preserved all existing Overview analytics and the V7.9 Primary-PC/Tasks workflow.
+
 # SlamDone V7.9.0 — Primary PC Reconciliation + Tasks Command Center
 
 - Fixed phone restore ordering so `work_items` reconcile parent-before-child and unresolved parent links are reported instead of causing SQLite foreign-key error 787.
