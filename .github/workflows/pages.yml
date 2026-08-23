@@ -33,9 +33,6 @@ jobs:
 
       - name: Create web platform shell
         run: flutter create --platforms=web --project-name=slamdone .
-        
-      - name: Remove generated Flutter template test
-        run: rm -f test/widget_test.dart
 
       - name: Install browser SQLite WASM assets
         run: dart run sqflite_common_ffi_web:setup --force
