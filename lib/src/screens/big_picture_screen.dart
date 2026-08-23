@@ -18,9 +18,9 @@ class BigPictureScreen extends StatefulWidget {
 }
 
 class _BigPictureScreenState extends State<BigPictureScreen> {
-  bool _filterBarVisible = false;
+  bool _controlsExpanded = false;
   bool _advancedFiltersVisible = false;
-  bool _filterPreferenceLoaded = false;
+  bool _controlPreferenceLoaded = false;
   bool _freeCanvas = false;
   WorkItemType? _levelFilter;
   PriorityLevel? _priorityFilter;
@@ -35,12 +35,12 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_filterPreferenceLoaded) return;
-    _filterPreferenceLoaded = true;
+    if (_controlPreferenceLoaded) return;
+    _controlPreferenceLoaded = true;
     final controller = AppScope.of(context);
-    controller.readUiSetting('big_picture_filters_visible').then((saved) {
+    controller.readUiSetting('big_picture_controls_expanded').then((saved) {
       if (!mounted || saved == null) return;
-      setState(() => _filterBarVisible = saved == 'true');
+      setState(() => _controlsExpanded = saved == 'true');
     });
   }
 
@@ -112,68 +112,58 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
         children: [
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.account_tree_outlined),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Big Picture',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const Text(
-                              'Clean hierarchy by default. Drag a card onto a higher-level parent, or use Free Canvas for personal placement.',
-                            ),
-                            const SizedBox(height: 3),
-                            const Text(
-                              'Wheel pan • Middle drag 4-way • Ctrl+wheel zoom',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      SegmentedButton<bool>(
-                        segments: const [
-                          ButtonSegment(
-                            value: false,
-                            label: Text('Structured'),
-                            icon: Icon(Icons.account_tree),
+                      Tooltip(
+                        message: _controlsExpanded
+                            ? 'Tuck Big Picture controls'
+                            : 'Show Big Picture controls',
+                        child: TextButton.icon(
+                          onPressed: () => _setControlsExpanded(
+                            controller,
+                            !_controlsExpanded,
                           ),
-                          ButtonSegment(
-                            value: true,
-                            label: Text('Free Canvas'),
-                            icon: Icon(Icons.open_with),
+                          icon: Icon(
+                            _controlsExpanded
+                                ? Icons.expand_less
+                                : Icons.expand_more,
                           ),
-                        ],
-                        selected: {_freeCanvas},
-                        onSelectionChanged: (value) =>
-                            setState(() => _freeCanvas = value.first),
+                          label: Text(
+                            'Big Picture',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
                       ),
-                      FilledButton.tonalIcon(
-                        onPressed: () => _setFilterBarVisible(
-                          controller,
-                          !_filterBarVisible,
-                        ),
-                        icon: Icon(
-                          _filterBarVisible
-                              ? Icons.filter_alt_off
-                              : Icons.filter_alt_outlined,
-                        ),
-                        label: Text(_filterBarVisible ? 'Hide filters' : 'Filters'),
+                      _statusChip(
+                        label: const Text('Active'),
+                        icon: Icons.play_circle_outline,
+                        status: WorkStatus.active,
+                        count: controller.workItems
+                            .where((item) => !item.isDeleted && item.status == WorkStatus.active)
+                            .length,
+                      ),
+                      _statusChip(
+                        label: const Text('Completed'),
+                        icon: Icons.check_circle_outline,
+                        status: WorkStatus.completed,
+                        count: controller.workItems
+                            .where((item) => !item.isDeleted && item.status == WorkStatus.completed)
+                            .length,
+                      ),
+                      _statusChip(
+                        label: const Text('Archived'),
+                        icon: Icons.archive_outlined,
+                        status: WorkStatus.archived,
+                        count: controller.workItems
+                            .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
+                            .length,
                       ),
                       FilledButton.icon(
                         onPressed: () =>
@@ -185,7 +175,8 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 180),
-                    child: !_filterBarVisible
+                    curve: Curves.easeOutCubic,
+                    child: !_controlsExpanded
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -194,29 +185,22 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                               runSpacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                _statusChip(
-                                  label: const Text('Active'),
-                                  icon: Icons.play_circle_outline,
-                                  status: WorkStatus.active,
-                                  count: controller.workItems
-                                      .where((item) => !item.isDeleted && item.status == WorkStatus.active)
-                                      .length,
-                                ),
-                                _statusChip(
-                                  label: const Text('Completed'),
-                                  icon: Icons.check_circle_outline,
-                                  status: WorkStatus.completed,
-                                  count: controller.workItems
-                                      .where((item) => !item.isDeleted && item.status == WorkStatus.completed)
-                                      .length,
-                                ),
-                                _statusChip(
-                                  label: const Text('Archived'),
-                                  icon: Icons.archive_outlined,
-                                  status: WorkStatus.archived,
-                                  count: controller.workItems
-                                      .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
-                                      .length,
+                                SegmentedButton<bool>(
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: false,
+                                      label: Text('Structured'),
+                                      icon: Icon(Icons.account_tree),
+                                    ),
+                                    ButtonSegment(
+                                      value: true,
+                                      label: Text('Free Canvas'),
+                                      icon: Icon(Icons.open_with),
+                                    ),
+                                  ],
+                                  selected: {_freeCanvas},
+                                  onSelectionChanged: (value) =>
+                                      setState(() => _freeCanvas = value.first),
                                 ),
                                 ActionChip(
                                   avatar: const Icon(Icons.select_all, size: 17),
@@ -237,7 +221,8 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 180),
-                    child: !_advancedFiltersVisible
+                    curve: Curves.easeOutCubic,
+                    child: !_controlsExpanded || !_advancedFiltersVisible
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 12),
@@ -270,11 +255,10 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                                         child: Text('All levels'),
                                       ),
                                       ...WorkItemType.values.map(
-                                        (value) =>
-                                            DropdownMenuItem<WorkItemType?>(
-                                              value: value,
-                                              child: Text(value.name),
-                                            ),
+                                        (value) => DropdownMenuItem<WorkItemType?>(
+                                          value: value,
+                                          child: Text(value.name),
+                                        ),
                                       ),
                                     ],
                                     onChanged: (value) =>
@@ -292,71 +276,36 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                                 ),
                                 SizedBox(
                                   width: 190,
-                                  child:
-                                      DropdownButtonFormField<PriorityLevel?>(
-                                        initialValue: _priorityFilter,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Priority',
-                                        ),
-                                        items: [
-                                          const DropdownMenuItem<
-                                            PriorityLevel?
-                                          >(
-                                            value: null,
-                                            child: Text('All priorities'),
-                                          ),
-                                          ...PriorityLevel.values.map(
-                                            (value) =>
-                                                DropdownMenuItem<
-                                                  PriorityLevel?
-                                                >(
-                                                  value: value,
-                                                  child: Text(value.name),
-                                                ),
-                                          ),
-                                        ],
-                                        onChanged: (value) => setState(
-                                          () => _priorityFilter = value,
+                                  child: DropdownButtonFormField<PriorityLevel?>(
+                                    initialValue: _priorityFilter,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Priority',
+                                    ),
+                                    items: [
+                                      const DropdownMenuItem<PriorityLevel?>(
+                                        value: null,
+                                        child: Text('All priorities'),
+                                      ),
+                                      ...PriorityLevel.values.map(
+                                        (value) => DropdownMenuItem<PriorityLevel?>(
+                                          value: value,
+                                          child: Text(value.name),
                                         ),
                                       ),
+                                    ],
+                                    onChanged: (value) =>
+                                        setState(() => _priorityFilter = value),
+                                  ),
                                 ),
                                 OutlinedButton.icon(
-                                  onPressed: () => _autoArrange(
-                                    controller,
-                                    allItems,
-                                    layouts,
-                                  ),
-                                  icon: const Icon(Icons.auto_fix_high),
-                                  label: const Text('Auto arrange'),
-                                ),
-                                DragTarget<String>(
-                                  onAcceptWithDetails: (details) =>
-                                      controller.applyDrop(
-                                        sourceId: details.data,
-                                        intent: DropIntent.makeRoot,
-                                      ),
-                                  builder: (context, candidates, rejected) =>
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: candidates.isEmpty
-                                              ? Theme.of(context)
-                                                    .colorScheme
-                                                    .surfaceContainerLow
-                                              : Theme.of(
-                                                  context,
-                                                ).colorScheme.primaryContainer,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Drop here to make Goal',
-                                        ),
-                                      ),
+                                  onPressed: () => setState(() {
+                                    _levelFilter = null;
+                                    _priorityFilter = null;
+                                    _search = '';
+                                    _showDescendants = false;
+                                  }),
+                                  icon: const Icon(Icons.filter_alt_off),
+                                  label: const Text('Clear'),
                                 ),
                               ],
                             ),
@@ -423,15 +372,18 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
     );
   }
 
-  Future<void> _setFilterBarVisible(
+  Future<void> _setControlsExpanded(
     AppController controller,
     bool value,
   ) async {
     setState(() {
-      _filterBarVisible = value;
+      _controlsExpanded = value;
       if (!value) _advancedFiltersVisible = false;
     });
-    await controller.writeUiSetting('big_picture_filters_visible', value.toString());
+    await controller.writeUiSetting(
+      'big_picture_controls_expanded',
+      value.toString(),
+    );
   }
 
   void _showAllStatuses() {

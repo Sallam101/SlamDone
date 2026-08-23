@@ -1,3 +1,11 @@
+# SlamDone V7.5.2
+
+- Big Picture header can now tuck secondary controls while keeping Big Picture, Active, Completed, Archived, and + Goal visible.
+- Removed the two instruction lines under Big Picture.
+- Structured and Free Canvas card status tags now wrap to additional lines as cards narrow instead of hiding in a horizontal strip.
+- Added quick Title smaller / Title larger actions to both Big Picture card types.
+- Hierarchy data, automatic layout engine, parent/child model, and controller logic are unchanged.
+
 ## 7.5.1 - 2026-08-23
 - Big Picture filter controls can now be fully collapsed behind a single Filters button while Structured/Free Canvas and + Goal remain visible.
 - Active, Completed, and Archived remain independent status toggles; All is now a one-click show-all shortcut.

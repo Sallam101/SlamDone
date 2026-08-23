@@ -452,6 +452,28 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                     case 'edit':
                       await widget.onEdit(item);
                       break;
+                    case 'titleSmaller':
+                      if (widget.onItemChanged != null) {
+                        await widget.onItemChanged!(
+                          item.copyWith(
+                            titleScale: (item.titleScale - 0.1)
+                                .clamp(0.75, 2.0)
+                                .toDouble(),
+                          ),
+                        );
+                      }
+                      break;
+                    case 'titleLarger':
+                      if (widget.onItemChanged != null) {
+                        await widget.onItemChanged!(
+                          item.copyWith(
+                            titleScale: (item.titleScale + 0.1)
+                                .clamp(0.75, 2.0)
+                                .toDouble(),
+                          ),
+                        );
+                      }
+                      break;
                     case 'add':
                       await widget.onAddChild(item);
                       break;
@@ -520,6 +542,22 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                       child: Text('Quick focus'),
                     ),
                   const PopupMenuItem(value: 'edit', child: Text('Edit item')),
+                  const PopupMenuItem(
+                    value: 'titleSmaller',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(Icons.text_decrease),
+                      title: Text('Title smaller'),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'titleLarger',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(Icons.text_increase),
+                      title: Text('Title larger'),
+                    ),
+                  ),
                   const PopupMenuItem(value: 'add', child: Text('Add child')),
                   PopupMenuItem(
                     value: 'lock',
@@ -677,6 +715,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                     softWrap: true,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: foreground,
+                      fontSize: (18 * item.titleScale).clamp(10.0, 40.0).toDouble(),
                       fontWeight: FontWeight.w800,
                       height: 1.12,
                       decoration: item.isCompleted
@@ -729,14 +768,9 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
         item.priority.name.toUpperCase(),
         _priorityColor(item.priority, scheme),
       ),
-      const SizedBox(width: 5),
       _statusPill(context, item.status.name.toUpperCase(), statusColor),
-      if (item.urgent) ...[
-        const SizedBox(width: 5),
-        _statusPill(context, 'URGENT', scheme.error),
-      ],
-      if (item.energyLevel != EnergyLevel.none) ...[
-        const SizedBox(width: 5),
+      if (item.urgent) _statusPill(context, 'URGENT', scheme.error),
+      if (item.energyLevel != EnergyLevel.none)
         _statusPill(
           context,
           '${item.energyLevel.name.toUpperCase()} ENERGY',
@@ -744,30 +778,23 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
               ? const Color(0xFFEF6C00)
               : const Color(0xFF0288D1),
         ),
-      ],
-      if (item.dueDate != null) ...[
-        const SizedBox(width: 5),
+      if (item.dueDate != null)
         _statusPill(
           context,
           'DUE ${MaterialLocalizations.of(context).formatShortDate(item.dueDate!.toLocal())}',
           scheme.tertiary,
         ),
-      ],
-      if (item.checklistTotal > 0) ...[
-        const SizedBox(width: 5),
+      if (item.checklistTotal > 0)
         _statusPill(
           context,
           '${item.checklistDone}/${item.checklistTotal} • ${(item.progress * 100).round()}%',
           scheme.secondary,
         ),
-      ],
     ];
-    return SizedBox(
-      height: 25,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(children: chips),
-      ),
+    return Wrap(
+      spacing: 5,
+      runSpacing: 4,
+      children: chips,
     );
   }
 

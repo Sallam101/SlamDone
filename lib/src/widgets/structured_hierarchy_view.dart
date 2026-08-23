@@ -1021,6 +1021,23 @@ class _StructuredCardState extends State<_StructuredCard> {
             title: Text('Change color'),
           ),
         ),
+      const PopupMenuDivider(),
+      const PopupMenuItem<String>(
+        value: 'titleSmaller',
+        child: ListTile(
+          dense: true,
+          leading: Icon(Icons.text_decrease),
+          title: Text('Title smaller'),
+        ),
+      ),
+      const PopupMenuItem<String>(
+        value: 'titleLarger',
+        child: ListTile(
+          dense: true,
+          leading: Icon(Icons.text_increase),
+          title: Text('Title larger'),
+        ),
+      ),
       if (!showDelete)
         const PopupMenuItem<String>(
           value: 'delete',
@@ -1055,6 +1072,24 @@ class _StructuredCardState extends State<_StructuredCard> {
               break;
             case 'edit':
               showWorkItemEditor(context, widget.controller, item: item);
+              break;
+            case 'titleSmaller':
+              widget.controller.updateWorkItem(
+                item.copyWith(
+                  titleScale: (item.titleScale - 0.1)
+                      .clamp(0.75, 2.0)
+                      .toDouble(),
+                ),
+              );
+              break;
+            case 'titleLarger':
+              widget.controller.updateWorkItem(
+                item.copyWith(
+                  titleScale: (item.titleScale + 0.1)
+                      .clamp(0.75, 2.0)
+                      .toDouble(),
+                ),
+              );
               break;
             case 'color':
               _chooseColor();
@@ -1096,34 +1131,23 @@ class _StructuredCardState extends State<_StructuredCard> {
 
     final tagWidgets = <Widget>[
       _tag(item.priority.name.toUpperCase(), foreground),
-      if (item.dueDate != null) ...[
-        const SizedBox(width: 4),
+      if (item.dueDate != null)
         _tag(
           MaterialLocalizations.of(
             context,
           ).formatShortDate(item.dueDate!.toLocal()),
           foreground,
         ),
-      ],
-      const SizedBox(width: 4),
       _tag(item.status.name.toUpperCase(), foreground),
-      if (item.urgent) ...[
-        const SizedBox(width: 4),
-        _tag('URGENT', foreground),
-      ],
-      if (item.recurring) ...[
-        const SizedBox(width: 4),
+      if (item.urgent) _tag('URGENT', foreground),
+      if (item.recurring)
         _tag(
           item.recurrenceDays == 1
               ? 'DAILY'
               : 'EVERY ${item.recurrenceDays} DAYS',
           foreground,
         ),
-      ],
-      if (item.energyLevel != EnergyLevel.none) ...[
-        const SizedBox(width: 4),
-        _energyTag(item.energyLevel),
-      ],
+      if (item.energyLevel != EnergyLevel.none) _energyTag(item.energyLevel),
     ];
 
     return ClipRect(
@@ -1151,15 +1175,11 @@ class _StructuredCardState extends State<_StructuredCard> {
           ),
           if (showTags) ...[
             const SizedBox(height: 5),
-            SizedBox(
-              height: 20,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: tagWidgets,
-                ),
-              ),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 4,
+              runSpacing: 3,
+              children: tagWidgets,
             ),
           ],
           if (showNotes) ...[
