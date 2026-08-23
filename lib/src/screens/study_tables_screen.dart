@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:excel/excel.dart' as xls;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -61,7 +62,7 @@ class _StudyTablesScreenState extends State<StudyTablesScreen> {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const Text(
-                          'Resizable wrapped cells, font controls, CSV import/export, Excel export, archive, rows, and columns.',
+                          'Excel/CSV import, row + column resizing, cell formatting, export, archive, rows, and columns.',
                         ),
                       ],
                     ),
@@ -73,9 +74,9 @@ class _StudyTablesScreenState extends State<StudyTablesScreen> {
                         setState(() => _showArchived = value),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () => _importCsv(context),
+                    onPressed: () => _importTable(context),
                     icon: const Icon(Icons.upload_file),
-                    label: const Text('Import CSV'),
+                    label: const Text('Import Excel / CSV'),
                   ),
                   FilledButton.icon(
                     onPressed: () => _newTable(context),
@@ -150,33 +151,54 @@ class _StudyTablesScreenState extends State<StudyTablesScreen> {
     }
   }
 
-  Future<void> _importCsv(BuildContext context) async {
+  Future<void> _importTable(BuildContext context) async {
     final controller = AppScope.of(context);
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['csv', 'tsv'],
+      allowedExtensions: const ['csv', 'tsv', 'xlsx'],
       withData: true,
     );
     final selected = result?.files.single;
     final bytes = selected?.bytes;
     if (selected == null || bytes == null || !context.mounted) return;
-    final raw = utf8.decode(bytes);
-    final delimiter = selected.name.toLowerCase().endsWith('.tsv') ? '\t' : ',';
-    final lines = const LineSplitter()
-        .convert(raw)
-        .where((line) => line.trim().isNotEmpty)
+
+    final lower = selected.name.toLowerCase();
+    late final List<List<String>> importedRows;
+    if (lower.endsWith('.xlsx')) {
+      final workbook = xls.Excel.decodeBytes(bytes);
+      if (workbook.tables.isEmpty) return;
+      final sheet = workbook.tables.values.first;
+      if (sheet == null) return;
+      importedRows = sheet.rows
+          .map((row) => row.map((cell) => cell?.value?.toString() ?? '').toList())
+          .where((row) => row.any((value) => value.trim().isNotEmpty))
+          .toList();
+    } else {
+      final raw = utf8.decode(bytes);
+      final delimiter = lower.endsWith('.tsv') ? '\t' : ',';
+      importedRows = const LineSplitter()
+          .convert(raw)
+          .where((line) => line.trim().isNotEmpty)
+          .map((line) => _parseLine(line, delimiter))
+          .toList();
+    }
+    if (importedRows.isEmpty) return;
+
+    final extension = lower.endsWith('.xlsx')
+        ? '.xlsx'
+        : lower.endsWith('.tsv')
+        ? '.tsv'
+        : '.csv';
+    final fileName = selected.name.substring(0, selected.name.length - extension.length);
+    final width = importedRows.fold<int>(0, (maxWidth, row) => row.length > maxWidth ? row.length : maxWidth);
+    final normalized = importedRows
+        .map((row) => [...row, ...List<String>.filled(width - row.length, '')])
         .toList();
-    if (lines.isEmpty) return;
-    final rows = lines.map((line) => _parseLine(line, delimiter)).toList();
-    final fileName = selected.name.replaceAll(
-      RegExp(r'\.(csv|tsv)$', caseSensitive: false),
-      '',
-    );
     final table = await controller.createStudyTable(fileName);
     await controller.updateStudyTable(
       table.copyWith(
-        columnsJson: jsonEncode(rows.first),
-        rowsJson: jsonEncode(rows.skip(1).toList()),
+        columnsJson: jsonEncode(normalized.first),
+        rowsJson: jsonEncode(normalized.skip(1).toList()),
       ),
     );
     if (mounted) setState(() => _selectedId = table.id);
@@ -214,6 +236,10 @@ class _EditableTableState extends State<_EditableTable> {
   late List<String> columns;
   late List<List<String>> rows;
   List<double> columnWidths = <double>[];
+  List<double> rowHeights = <double>[];
+  Map<String, Map<String, Object?>> cellFormats = <String, Map<String, Object?>>{};
+  int? _selectedRowIndex;
+  int? _selectedCellColumnIndex;
   double fontSize = 14;
   bool wrapText = true;
   bool _preferencesLoaded = false;
@@ -265,6 +291,9 @@ class _EditableTableState extends State<_EditableTable> {
     if (!keepWidths || columnWidths.length != columns.length) {
       columnWidths = List<double>.filled(columns.length, 180);
     }
+    if (!keepWidths || rowHeights.length != rows.length) {
+      rowHeights = List<double>.filled(rows.length, 54);
+    }
     if (_selectedColumnIndex != null &&
         _selectedColumnIndex! >= columns.length) {
       _selectedColumnIndex = columns.isEmpty ? null : columns.length - 1;
@@ -283,6 +312,21 @@ class _EditableTableState extends State<_EditableTable> {
                 ?.map((value) => (value as num).toDouble())
                 .toList() ??
             const <double>[];
+        final savedRowHeights =
+            (map['rowHeights'] as List?)
+                ?.map((value) => (value as num).toDouble())
+                .toList() ??
+            const <double>[];
+        final savedFormats = <String, Map<String, Object?>>{};
+        final rawFormats = map['cellFormats'];
+        if (rawFormats is Map) {
+          for (final entry in rawFormats.entries) {
+            if (entry.value is Map) {
+              savedFormats[entry.key.toString()] =
+                  (entry.value as Map).map((key, value) => MapEntry(key.toString(), value));
+            }
+          }
+        }
         setState(() {
           fontSize = ((map['fontSize'] as num?)?.toDouble() ?? 14)
               .clamp(9, 28)
@@ -294,12 +338,21 @@ class _EditableTableState extends State<_EditableTable> {
                 ? savedWidths[index].clamp(90, 520).toDouble()
                 : 180,
           );
+          rowHeights = List<double>.generate(
+            rows.length,
+            (index) => index < savedRowHeights.length
+                ? savedRowHeights[index].clamp(38, 360).toDouble()
+                : 54,
+          );
+          cellFormats = savedFormats;
         });
         return;
       } catch (_) {}
     }
     setState(() {
       columnWidths = List<double>.filled(columns.length, 180);
+      rowHeights = List<double>.filled(rows.length, 54);
+      cellFormats = <String, Map<String, Object?>>{};
     });
   }
 
@@ -309,6 +362,8 @@ class _EditableTableState extends State<_EditableTable> {
       _preferenceKey,
       jsonEncode({
         'widths': columnWidths,
+        'rowHeights': rowHeights,
+        'cellFormats': cellFormats,
         'fontSize': fontSize,
         'wrapText': wrapText,
       }),
@@ -333,6 +388,38 @@ class _EditableTableState extends State<_EditableTable> {
                 Text(
                   widget.table.title,
                   style: Theme.of(context).textTheme.titleLarge,
+                ),
+                FilterChip(
+                  tooltip: 'Bold cell',
+                  label: const Text('Bold cell'),
+                  selected: _selectedCellFormat['bold'] == true,
+                  onSelected: _selectedRowIndex == null || _selectedCellColumnIndex == null
+                      ? null
+                      : (value) => _setSelectedCellFormat('bold', value),
+                ),
+                PopupMenuButton<int?>(
+                  enabled: _selectedRowIndex != null && _selectedCellColumnIndex != null,
+                  tooltip: 'Cell color',
+                  onSelected: (value) => _setSelectedCellFormat('bg', value),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem<int?>(value: null, child: Text('Cell color: none')),
+                    for (final color in const <Color>[
+                      Color(0xFFFFF59D),
+                      Color(0xFFC8E6C9),
+                      Color(0xFFBBDEFB),
+                      Color(0xFFF8BBD0),
+                      Color(0xFFD1C4E9),
+                    ])
+                      PopupMenuItem<int?>(
+                        value: color.toARGB32(),
+                        child: Row(children: [
+                          Container(width: 20, height: 20, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+                          const SizedBox(width: 8),
+                          const Text('Cell color'),
+                        ]),
+                      ),
+                  ],
+                  child: const Chip(avatar: Icon(Icons.format_color_fill, size: 18), label: Text('Cell color')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
@@ -369,8 +456,12 @@ class _EditableTableState extends State<_EditableTable> {
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
-                    setState(() => rows.add(List.filled(columns.length, '')));
+                    setState(() {
+                      rows.add(List.filled(columns.length, ''));
+                      rowHeights.add(54);
+                    });
                     _save(controller);
+                    _savePreferences();
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Row'),
@@ -508,54 +599,152 @@ class _EditableTableState extends State<_EditableTable> {
     while (rows[rowIndex].length < columns.length) {
       rows[rowIndex].add('');
     }
-    return IntrinsicHeight(
+    while (rowHeights.length <= rowIndex) rowHeights.add(54);
+    final rowHeight = rowHeights[rowIndex].clamp(38, 360).toDouble();
+    return SizedBox(
+      height: rowHeight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var columnIndex = 0; columnIndex < columns.length; columnIndex++)
-            Container(
-              width: columnWidths[columnIndex],
-              constraints: const BoxConstraints(minHeight: 48),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-              ),
-              child: TextFormField(
-                key: ValueKey('${widget.table.id}-$rowIndex-$columnIndex'),
-                initialValue: rows[rowIndex][columnIndex],
-                minLines: 1,
-                maxLines: wrapText ? null : 1,
-                style: TextStyle(fontSize: fontSize, height: 1.25),
-                onChanged: (value) {
-                  rows[rowIndex][columnIndex] = value;
-                  _scheduleSave(controller);
-                },
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                ),
-              ),
-            ),
+            _buildEditableCell(controller, rowIndex, columnIndex),
           SizedBox(
             width: 52,
-            child: IconButton(
-              tooltip: 'Delete row',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () {
-                setState(() => rows.removeAt(rowIndex));
-                _save(controller);
-              },
+            child: Column(
+              children: [
+                Expanded(
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeRow,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragUpdate: (details) => resizeRow(rowIndex, details.delta.dy),
+                      onVerticalDragEnd: (_) => _savePreferences(),
+                      child: const Tooltip(
+                        message: 'Drag to resize row',
+                        child: Icon(Icons.drag_handle),
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Delete row',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () {
+                    setState(() {
+                      rows.removeAt(rowIndex);
+                      if (rowIndex < rowHeights.length) rowHeights.removeAt(rowIndex);
+                      _removeRowFormats(rowIndex);
+                    });
+                    _save(controller);
+                    _savePreferences();
+                  },
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildEditableCell(
+    AppController controller,
+    int rowIndex,
+    int columnIndex,
+  ) {
+    final key = '$rowIndex:$columnIndex';
+    final format = cellFormats[key] ?? const <String, Object?>{};
+    final selected = _selectedRowIndex == rowIndex && _selectedCellColumnIndex == columnIndex;
+    final bgValue = format['bg'];
+    final background = bgValue is int ? Color(bgValue) : null;
+    return Container(
+      width: columnWidths[columnIndex],
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: background,
+        border: Border.all(
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outlineVariant,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: TextFormField(
+        key: ValueKey('${widget.table.id}-$rowIndex-$columnIndex'),
+        initialValue: rows[rowIndex][columnIndex],
+        minLines: 1,
+        maxLines: wrapText ? null : 1,
+        expands: false,
+        style: TextStyle(
+          fontSize: fontSize,
+          height: 1.25,
+          fontWeight: format['bold'] == true ? FontWeight.w800 : FontWeight.normal,
+        ),
+        onTap: () => setState(() {
+          _selectedRowIndex = rowIndex;
+          _selectedCellColumnIndex = columnIndex;
+        }),
+        onChanged: (value) {
+          rows[rowIndex][columnIndex] = value;
+          _scheduleSave(controller);
+        },
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        ),
+      ),
+    );
+  }
+
+  void resizeRow(int rowIndex, double delta) {
+    if (rowIndex < 0 || rowIndex >= rowHeights.length) return;
+    setState(() {
+      rowHeights[rowIndex] = (rowHeights[rowIndex] + delta).clamp(38, 360).toDouble();
+    });
+  }
+
+  Map<String, Object?> get _selectedCellFormat {
+    final row = _selectedRowIndex;
+    final col = _selectedCellColumnIndex;
+    if (row == null || col == null) return const <String, Object?>{};
+    return cellFormats['$row:$col'] ?? const <String, Object?>{};
+  }
+
+  void _setSelectedCellFormat(String key, Object? value) {
+    final row = _selectedRowIndex;
+    final col = _selectedCellColumnIndex;
+    if (row == null || col == null) return;
+    final cellKey = '$row:$col';
+    setState(() {
+      final next = Map<String, Object?>.from(cellFormats[cellKey] ?? const <String, Object?>{});
+      if (value == null || value == false) {
+        next.remove(key);
+      } else {
+        next[key] = value;
+      }
+      if (next.isEmpty) {
+        cellFormats.remove(cellKey);
+      } else {
+        cellFormats[cellKey] = next;
+      }
+    });
+    _savePreferences();
+  }
+
+  void _removeRowFormats(int removedRow) {
+    final next = <String, Map<String, Object?>>{};
+    for (final entry in cellFormats.entries) {
+      final parts = entry.key.split(':');
+      if (parts.length != 2) continue;
+      final row = int.tryParse(parts[0]);
+      final col = int.tryParse(parts[1]);
+      if (row == null || col == null || row == removedRow) continue;
+      next['${row > removedRow ? row - 1 : row}:$col'] = entry.value;
+    }
+    cellFormats = next;
+    _selectedRowIndex = null;
+    _selectedCellColumnIndex = null;
   }
 
   void _deleteColumn(AppController controller, int columnIndex) {
@@ -568,6 +757,9 @@ class _EditableTableState extends State<_EditableTable> {
       for (final row in rows) {
         if (columnIndex < row.length) row.removeAt(columnIndex);
       }
+      cellFormats.clear();
+      _selectedRowIndex = null;
+      _selectedCellColumnIndex = null;
       if (columns.isEmpty) {
         _selectedColumnIndex = null;
       } else if (_selectedColumnIndex != null) {

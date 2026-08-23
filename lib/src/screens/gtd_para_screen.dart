@@ -93,6 +93,7 @@ class _GtdBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _HorizontalBoard(
+      controller: controller,
       columns: GtdStatus.values.map((status) {
         return _BoardColumnData(
           title: _gtdName(status),
@@ -133,6 +134,7 @@ class _ParaBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     const categories = ['Projects', 'Areas', 'Resources', 'Archives'];
     return _HorizontalBoard(
+      controller: controller,
       columns: categories.map((category) {
         return _BoardColumnData(
           title: category,
@@ -168,7 +170,8 @@ class _BoardColumnData {
 }
 
 class _HorizontalBoard extends StatelessWidget {
-  const _HorizontalBoard({required this.columns});
+  const _HorizontalBoard({required this.controller, required this.columns});
+  final AppController controller;
   final List<_BoardColumnData> columns;
 
   @override
@@ -221,9 +224,9 @@ class _HorizontalBoard extends StatelessWidget {
                               ),
                               childWhenDragging: Opacity(
                                 opacity: 0.35,
-                                child: _item(item),
+                                child: _item(context, item),
                               ),
-                              child: _item(item),
+                              child: _item(context, item),
                             );
                           }).toList(),
                         ),
@@ -239,7 +242,8 @@ class _HorizontalBoard extends StatelessWidget {
     );
   }
 
-  Widget _item(WorkItem item) {
+  Widget _item(BuildContext context, WorkItem item) {
+    final canRestore = item.status == WorkStatus.completed || item.isArchived;
     return Card(
       child: ListTile(
         dense: true,
@@ -253,6 +257,42 @@ class _HorizontalBoard extends StatelessWidget {
           ),
         ),
         subtitle: Text('${item.type.name} • ${item.priority.name}'),
+        trailing: canRestore
+            ? PopupMenuButton<String>(
+                tooltip: 'Restore item',
+                onSelected: (value) async {
+                  if (value == 'unarchive') {
+                    await controller.unarchiveWorkItem(item);
+                  } else if (value == 'active') {
+                    await controller.updateWorkItem(
+                      item.copyWith(
+                        status: WorkStatus.active,
+                        gtdStatus: GtdStatus.toDo,
+                      ),
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (item.isArchived)
+                    const PopupMenuItem(
+                      value: 'unarchive',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.unarchive_outlined),
+                        title: Text('Unarchive'),
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'active',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(Icons.replay_outlined),
+                      title: Text('Restore to active'),
+                    ),
+                  ),
+                ],
+              )
+            : null,
       ),
     );
   }

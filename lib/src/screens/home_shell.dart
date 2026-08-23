@@ -33,7 +33,7 @@ class _HomeShellState extends State<HomeShell> {
   late final List<Widget> _screens;
   int _lastAutoArchiveSequence = 0;
   Offset _floatingTimerOffset = const Offset(18, 18);
-  Size _floatingTimerSize = const Size(326, 360);
+  Size _floatingTimerSize = const Size(238, 236);
 
   @override
   void initState() {
@@ -243,13 +243,13 @@ class _HomeShellState extends State<HomeShell> {
                 ),
           body: LayoutBuilder(
             builder: (context, bodyConstraints) {
-              final minTimerWidth = desktop ? 286.0 : 250.0;
-              final minTimerHeight = desktop ? 310.0 : 286.0;
+              final minTimerWidth = desktop ? 184.0 : 172.0;
+              final minTimerHeight = desktop ? 176.0 : 164.0;
               final maxTimerWidth = (bodyConstraints.maxWidth - 16)
-                  .clamp(minTimerWidth, 620.0)
+                  .clamp(minTimerWidth, 760.0)
                   .toDouble();
               final maxTimerHeight = (bodyConstraints.maxHeight - 16)
-                  .clamp(minTimerHeight, 720.0)
+                  .clamp(minTimerHeight, 840.0)
                   .toDouble();
               final timerSize = Size(
                 _floatingTimerSize.width.clamp(minTimerWidth, maxTimerWidth).toDouble(),

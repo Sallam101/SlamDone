@@ -17,12 +17,19 @@ Production URL after Pages is enabled:
 
 The planner UI writes to local SQLite first. SlamDone then queues changed records for Firestore. Cloud records merge back into local SQLite using the existing Autivra ordering: higher revision, then newer `client_updated_at`, then device ID as deterministic tie-break.
 
+## SlamDone 7.4 brand, timer and analytics upgrade
+
+- Approved S/check speed-mark identity with **STOP PLANNING. START FINISHING.** across the header, drawer, PWA icon and metadata.
+- Floating timer now ranges from a true mini panel to a large workspace panel and reflows controls at four responsive densities.
+- Overview KPI cards open detail drilldowns; daily Focus/Tasks/Habits/Goals trend lines show hover values.
+- Focus-by-project/goal analytics show where focus time is actually going.
+- GTD/PARA cards can explicitly Unarchive or Restore to active without drag gymnastics.
+- Study Tables accept XLSX/CSV/TSV imports and add row resizing plus per-cell bold/background formatting.
+
 ## SlamDone 7.3 daily-use upgrade
 
-- Branded SlamDone header/drawer with **Plan • Focus • Finish**.
 - Big Picture quick status toggles for Active, Completed, Archived, and All.
 - Journal period filters (Week/Month/Year/All) and four display densities.
-- Resizable floating timer.
 - Consistent spatial navigation guidance: wheel pan, middle-drag 4-way pan, Ctrl+wheel zoom.
 - Explicit phone hamburger navigation with every planner section in the drawer.
 

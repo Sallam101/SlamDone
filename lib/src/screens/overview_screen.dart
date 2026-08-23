@@ -96,6 +96,17 @@ class _OverviewScreenState extends State<OverviewScreen> {
         _palettes[controller.dashboardPaletteIndex
             .clamp(0, _palettes.length - 1)
             .toInt()];
+    final dailyTrend = _buildDailyTrend(
+      controller.workItems,
+      controller.sessions,
+      controller.habitEntries,
+      currentRange,
+    );
+    final projectFocus = _buildProjectFocus(
+      controller.workItems,
+      controller.sessions,
+      currentRange,
+    );
 
     return ListView(
       padding: const EdgeInsets.all(18),
@@ -197,6 +208,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
               value: '${current.completedItems}',
               detail:
                   '${(current.itemCompletion * 100).round()}% of dated work',
+              onTap: () => _showMetricDrillDown(
+                context,
+                'Items completed',
+                controller.workItems
+                    .where((item) => !item.isDeleted && item.isCompleted && _inPeriod(item.updatedAt, currentRange))
+                    .map((item) => '${item.title} • ${dateKey(item.updatedAt.toLocal())}')
+                    .toList(),
+              ),
             ),
             _MetricCard(
               color: palette[1],
@@ -204,6 +223,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
               title: 'Deep focus',
               value: '${current.focusMinutes} min',
               detail: '${formatHoursFromMinutes(current.focusMinutes)} hours',
+              onTap: () => _showMetricDrillDown(
+                context,
+                'Deep focus sessions',
+                controller.sessions
+                    .where((session) => session.deletedAt == null && session.completed && session.mode != TimerMode.stopwatch && _inPeriod(session.startedAt, currentRange))
+                    .map((session) => '${session.title} • ${(session.elapsedSeconds / 60).round()} min • ${dateKey(session.startedAt.toLocal())}')
+                    .toList(),
+              ),
             ),
             _MetricCard(
               color: palette[2],
@@ -211,6 +238,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
               title: 'Focus streak',
               value: '${controller.focusDayStreak} days',
               detail: '${controller.todaySessionCount} sessions today',
+              onTap: () => _showMetricDrillDown(
+                context,
+                'Focus streak',
+                dailyTrend
+                    .where((day) => day.focusMinutes > 0)
+                    .map((day) => '${dateKey(day.day)} • ${day.focusMinutes} min focus')
+                    .toList(),
+              ),
             ),
             _MetricCard(
               color: palette[3],
@@ -218,6 +253,14 @@ class _OverviewScreenState extends State<OverviewScreen> {
               title: 'Goals hit',
               value: '${current.goalsHit}',
               detail: '${current.goalTarget} goal/milestone targets',
+              onTap: () => _showMetricDrillDown(
+                context,
+                'Goals and milestones hit',
+                controller.workItems
+                    .where((item) => !item.isDeleted && item.isCompleted && (item.type == WorkItemType.goal || item.type == WorkItemType.milestone) && _inPeriod(item.updatedAt, currentRange))
+                    .map((item) => '${item.title} • ${dateKey(item.updatedAt.toLocal())}')
+                    .toList(),
+              ),
             ),
             _MetricCard(
               color: palette[4],
@@ -225,6 +268,17 @@ class _OverviewScreenState extends State<OverviewScreen> {
               title: 'Habit progress',
               value: '${(current.habitProgress * 100).round()}%',
               detail: '${current.habitCheckIns} positive check-ins',
+              onTap: () => _showMetricDrillDown(
+                context,
+                'Habit check-ins',
+                controller.habitEntries
+                    .where((entry) {
+                      final day = DateTime.tryParse(entry.entryDate);
+                      return entry.deletedAt == null && entry.value > 0 && day != null && !day.isBefore(currentRange.start) && day.isBefore(currentRange.end);
+                    })
+                    .map((entry) => '${entry.entryDate} • ${entry.value.toStringAsFixed(entry.value % 1 == 0 ? 0 : 1)}')
+                    .toList(),
+              ),
             ),
             _MetricCard(
               color: palette[5],
@@ -233,6 +287,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
               value: '${controller.totalRewardPoints}',
               detail:
                   controller.currentRewardRank?.name ?? 'Build your first rank',
+              onTap: () => _showMetricDrillDown(
+                context,
+                'Reward progress',
+                [
+                  'Total points • ${controller.totalRewardPoints}',
+                  'Current rank • ${controller.currentRewardRank?.name ?? 'Not ranked yet'}',
+                  ...controller.rewardRanks.map((rank) => '${rank.name} • ${rank.minimumPoints} points'),
+                ],
+              ),
             ),
           ],
         ),
@@ -266,6 +329,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ),
         ),
         const SizedBox(height: 18),
+        _DailyTrendChart(points: dailyTrend, colors: palette),
+        const SizedBox(height: 18),
+        _ProjectFocusBreakdown(items: projectFocus, color: palette[1]),
+        const SizedBox(height: 18),
         _PerformanceCharts(
           current: current,
           colors: palette,
@@ -286,8 +353,8 @@ class _OverviewScreenState extends State<OverviewScreen> {
               children: [
                 Text(
                   _monthly
-                      ? 'Current month vs previous month'
-                      : 'Current week vs previous week',
+                      ? 'Current vs previous • month'
+                      : 'Current vs previous • week',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 4),
@@ -374,6 +441,45 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showMetricDrillDown(
+    BuildContext context,
+    String title,
+    List<String> rows,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * .66,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(title, style: Theme.of(sheetContext).textTheme.titleLarge),
+              ),
+              Expanded(
+                child: rows.isEmpty
+                    ? const Center(child: Text('No matching activity in this period.'))
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+                        itemCount: rows.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) => ListTile(
+                          leading: CircleAvatar(child: Text('${index + 1}')),
+                          title: Text(rows[index]),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1128,12 +1234,14 @@ class _MetricCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.detail,
+    this.onTap,
   });
   final Color color;
   final IconData icon;
   final String title;
   final String value;
   final String detail;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1145,7 +1253,10 @@ class _MetricCard extends StatelessWidget {
       width: 250,
       child: Card(
         color: color.withValues(alpha: .88),
-        child: Padding(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1168,8 +1279,359 @@ class _MetricCard extends StatelessWidget {
                   color: foreground.withValues(alpha: .9),
                 ),
               ),
+              if (onTap != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Click for details',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: foreground.withValues(alpha: .82),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ],
           ),
+        ),
+        ),
+      ),
+    );
+  }
+}
+
+bool _inPeriod(DateTime value, _PeriodRange range) {
+  final local = value.toLocal();
+  return !local.isBefore(range.start) && local.isBefore(range.end);
+}
+
+class _DailyTrendPoint {
+  const _DailyTrendPoint({
+    required this.day,
+    required this.focusMinutes,
+    required this.completedItems,
+    required this.habitCheckIns,
+    required this.goalsHit,
+  });
+
+  final DateTime day;
+  final int focusMinutes;
+  final int completedItems;
+  final int habitCheckIns;
+  final int goalsHit;
+}
+
+List<_DailyTrendPoint> _buildDailyTrend(
+  List<WorkItem> items,
+  List<TimeSession> sessions,
+  List<HabitEntry> habitEntries,
+  _PeriodRange range,
+) {
+  final result = <_DailyTrendPoint>[];
+  for (var day = range.start; day.isBefore(range.end); day = day.add(const Duration(days: 1))) {
+    final next = day.add(const Duration(days: 1));
+    bool sameDay(DateTime value) {
+      final local = value.toLocal();
+      return !local.isBefore(day) && local.isBefore(next);
+    }
+
+    final focusMinutes = sessions
+        .where((session) =>
+            session.deletedAt == null &&
+            session.completed &&
+            session.mode != TimerMode.stopwatch &&
+            sameDay(session.startedAt))
+        .fold<int>(0, (sum, session) => sum + (session.elapsedSeconds / 60).round());
+    final completed = items
+        .where((item) => !item.isDeleted && item.isCompleted && sameDay(item.updatedAt))
+        .length;
+    final goals = items
+        .where((item) =>
+            !item.isDeleted &&
+            item.isCompleted &&
+            (item.type == WorkItemType.goal || item.type == WorkItemType.milestone) &&
+            sameDay(item.updatedAt))
+        .length;
+    final habitKey = dateKey(day);
+    final checkIns = habitEntries
+        .where((entry) => entry.deletedAt == null && entry.value > 0 && entry.entryDate == habitKey)
+        .length;
+    result.add(_DailyTrendPoint(
+      day: day,
+      focusMinutes: focusMinutes,
+      completedItems: completed,
+      habitCheckIns: checkIns,
+      goalsHit: goals,
+    ));
+  }
+  return result;
+}
+
+enum _TrendMetric { focus, tasks, habits, goals }
+
+class _DailyTrendChart extends StatefulWidget {
+  const _DailyTrendChart({required this.points, required this.colors});
+  final List<_DailyTrendPoint> points;
+  final List<Color> colors;
+
+  @override
+  State<_DailyTrendChart> createState() => _DailyTrendChartState();
+}
+
+class _DailyTrendChartState extends State<_DailyTrendChart> {
+  _TrendMetric _metric = _TrendMetric.focus;
+  int? _hoverIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = widget.points.map(_valueFor).toList();
+    final color = switch (_metric) {
+      _TrendMetric.focus => widget.colors[1],
+      _TrendMetric.tasks => widget.colors[0],
+      _TrendMetric.habits => widget.colors[4],
+      _TrendMetric.goals => widget.colors[3],
+    };
+    final label = switch (_metric) {
+      _TrendMetric.focus => 'Focus minutes',
+      _TrendMetric.tasks => 'Completed tasks',
+      _TrendMetric.habits => 'Habit check-ins',
+      _TrendMetric.goals => 'Goals hit',
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Daily trend lines', style: Theme.of(context).textTheme.titleLarge),
+            const Text('Hover a point to see the date and raw value. Switch metrics without leaving the dashboard.'),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _TrendMetric.values.map((metric) {
+                final text = switch (metric) {
+                  _TrendMetric.focus => 'Focus',
+                  _TrendMetric.tasks => 'Tasks',
+                  _TrendMetric.habits => 'Habits',
+                  _TrendMetric.goals => 'Goals',
+                };
+                return ChoiceChip(
+                  label: Text(text),
+                  selected: _metric == metric,
+                  onSelected: (_) => setState(() {
+                    _metric = metric;
+                    _hoverIndex = null;
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 210,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return MouseRegion(
+                    onExit: (_) => setState(() => _hoverIndex = null),
+                    onHover: (event) {
+                      if (widget.points.isEmpty) return;
+                      final plotWidth = math.max(1.0, constraints.maxWidth - 32);
+                      final relative = (event.localPosition.dx - 16).clamp(0.0, plotWidth);
+                      final index = widget.points.length <= 1
+                          ? 0
+                          : ((relative / plotWidth) * (widget.points.length - 1)).round();
+                      if (_hoverIndex != index) setState(() => _hoverIndex = index);
+                    },
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _TrendPainter(
+                              values: values,
+                              color: color,
+                              highlightIndex: _hoverIndex,
+                            ),
+                          ),
+                        ),
+                        if (_hoverIndex != null && _hoverIndex! < widget.points.length)
+                          Positioned(
+                            left: 18,
+                            top: 8,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: const [BoxShadow(blurRadius: 6, color: Color(0x22000000))],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                child: Text(
+                                  '${dateKey(widget.points[_hoverIndex!].day)} • $label: ${values[_hoverIndex!]}',
+                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (widget.points.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(dateKey(widget.points.first.day), style: Theme.of(context).textTheme.labelSmall),
+                  Text(dateKey(widget.points.last.day), style: Theme.of(context).textTheme.labelSmall),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _valueFor(_DailyTrendPoint point) => switch (_metric) {
+    _TrendMetric.focus => point.focusMinutes,
+    _TrendMetric.tasks => point.completedItems,
+    _TrendMetric.habits => point.habitCheckIns,
+    _TrendMetric.goals => point.goalsHit,
+  };
+}
+
+class _TrendPainter extends CustomPainter {
+  const _TrendPainter({required this.values, required this.color, this.highlightIndex});
+  final List<int> values;
+  final Color color;
+  final int? highlightIndex;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final chart = Rect.fromLTWH(16, 12, math.max(1, size.width - 32), math.max(1, size.height - 28));
+    final grid = Paint()..color = color.withValues(alpha: .10)..strokeWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      final y = chart.top + chart.height * i / 4;
+      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), grid);
+    }
+    if (values.isEmpty) return;
+    final maxValue = math.max(1, values.fold<int>(0, math.max));
+    Offset point(int index) {
+      final x = values.length == 1 ? chart.center.dx : chart.left + chart.width * index / (values.length - 1);
+      final y = chart.bottom - chart.height * values[index] / maxValue;
+      return Offset(x, y);
+    }
+    final line = Paint()
+      ..color = color
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()..moveTo(point(0).dx, point(0).dy);
+    for (var i = 1; i < values.length; i++) path.lineTo(point(i).dx, point(i).dy);
+    canvas.drawPath(path, line);
+    for (var i = 0; i < values.length; i++) {
+      final active = i == highlightIndex;
+      canvas.drawCircle(point(i), active ? 6 : 3.5, Paint()..color = active ? Colors.white : color);
+      if (active) {
+        final ring = Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3;
+        canvas.drawCircle(point(i), 6, ring);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrendPainter oldDelegate) =>
+      oldDelegate.values != values || oldDelegate.color != color || oldDelegate.highlightIndex != highlightIndex;
+}
+
+class _ProjectFocus {
+  const _ProjectFocus(this.title, this.minutes);
+  final String title;
+  final int minutes;
+}
+
+List<_ProjectFocus> _buildProjectFocus(
+  List<WorkItem> items,
+  List<TimeSession> sessions,
+  _PeriodRange range,
+) {
+  final byId = {for (final item in items.where((item) => !item.isDeleted)) item.id: item};
+  final totals = <String, int>{};
+  for (final session in sessions) {
+    if (session.deletedAt != null || !session.completed || session.mode == TimerMode.stopwatch || !_inPeriod(session.startedAt, range)) continue;
+    var title = 'General focus';
+    if (session.workItemId != null) {
+      var current = byId[session.workItemId!];
+      WorkItem? bucket = current;
+      var guard = 0;
+      while (current?.parentId != null && guard++ < 30) {
+        final parent = byId[current!.parentId!];
+        if (parent == null) break;
+        bucket = parent;
+        current = parent;
+      }
+      title = bucket?.title ?? session.title;
+    }
+    totals[title] = (totals[title] ?? 0) + (session.elapsedSeconds / 60).round();
+  }
+  final output = totals.entries.map((entry) => _ProjectFocus(entry.key, entry.value)).toList()
+    ..sort((a, b) => b.minutes.compareTo(a.minutes));
+  return output;
+}
+
+class _ProjectFocusBreakdown extends StatelessWidget {
+  const _ProjectFocusBreakdown({required this.items, required this.color});
+  final List<_ProjectFocus> items;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxMinutes = items.isEmpty ? 1 : math.max(1, items.first.minutes);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Focus by project / goal', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              items.isEmpty
+                  ? 'No linked focus sessions in this period yet.'
+                  : 'Most focus: ${items.first.title} • ${items.first.minutes} min   |   Least focus: ${items.last.title} • ${items.last.minutes} min',
+            ),
+            const SizedBox(height: 12),
+            if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 22),
+                child: Center(child: Text('Start a focus session from a task or project to populate this chart.')),
+              )
+            else
+              ...items.take(10).map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            Text('${item.minutes} min', style: const TextStyle(fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: item.minutes / maxMinutes,
+                          minHeight: 10,
+                          borderRadius: BorderRadius.circular(8),
+                          color: color,
+                          backgroundColor: color.withValues(alpha: .10),
+                        ),
+                      ],
+                    ),
+                  )),
+          ],
         ),
       ),
     );

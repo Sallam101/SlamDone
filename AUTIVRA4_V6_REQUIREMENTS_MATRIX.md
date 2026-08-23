@@ -13,10 +13,10 @@ This file maps the requested PC-first feature set to the V6 implementation.
 | Journal | Renamed Journal, separate daily editor, editable recurring questions, movable/reorderable prompt cards, local-first saving, folders, archive, history snapshots. |
 | NorthStar | Colorful movable/resizable notes, multiple pinned notes, font weight, hide/show, folders, checklists, links, and embedded images. |
 | Rewards | Editable rank names, thresholds, colors and icons; configurable focus-minute and hierarchy-level point values. |
-| GTD + PARA | Drag items between Inbox, To Be Done, In Progress, Completed and Archive; shared records update every other view. |
-| Study Tables | Multiple tabbed tables, editable headers/rows/columns, CSV/TSV import, CSV export, archive and delete. |
+| GTD + PARA | Drag items between Inbox, To Be Done, In Progress, Completed and Archive; explicit Unarchive/Restore actions; shared records update every other view. |
+| Study Tables | Multiple tabbed tables, editable headers/rows/columns, XLSX/CSV/TSV import, row/column resizing, per-cell bold/background formatting, CSV/Excel export, archive and delete. |
 | Appearance / Tabs | Light/dark/system, accent/background/card/text colors, font family and scale, reset, tab names, colors and order, horizontal tab scrolling. |
-| Overview | Weekly/monthly glance with completed items, focus minutes/hours, focus streak, goals hit, and period navigation. |
+| Overview | Weekly/monthly glance plus clickable KPI drilldowns, current-vs-previous comparisons, daily line trends, goal bars, focus streak, and focus-by-project/goal analysis. |
 | Sync / Backup | Immediate local SQLite save; append-only per-record Google Drive desktop-folder sync across PCs; optional Supabase row-level sync for future Android; JSON export/import and V4 migration. |
 | Distribution | Windows release build script, portable installer ZIP, local installer script, desktop and Start-menu shortcuts. |
 

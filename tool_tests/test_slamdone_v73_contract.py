@@ -13,7 +13,7 @@ class SlamDoneV73ContractTest(unittest.TestCase):
         home = self.read('lib/src/screens/home_shell.dart')
         web = self.read('tools/brand_web.py')
         self.assertIn('class SlamDoneBrand', brand)
-        self.assertIn('Plan • Focus • Finish', brand)
+        self.assertIn('STOP PLANNING. START FINISHING.', brand)
         self.assertIn('SlamDoneBrand(', home)
         self.assertIn('slamdone-mark.svg', web)
 
@@ -45,7 +45,7 @@ class SlamDoneV73ContractTest(unittest.TestCase):
         self.assertIn('_floatingTimerSize', home)
         self.assertIn('onResizeDelta:', home)
         self.assertIn('required this.onResizeDelta', overlay)
-        self.assertIn("tooltip: 'Resize timer'", overlay)
+        self.assertTrue("tooltip: 'Resize timer'" in overlay or "message: 'Resize timer'" in overlay)
 
     def test_spatial_views_show_middle_pan_navigation_contract(self):
         structured = self.read('lib/src/widgets/structured_hierarchy_view.dart')

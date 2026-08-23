@@ -1,3 +1,13 @@
+# SlamDone V7.4.0 — Brand, Timer & Analytics Upgrade
+
+- Replaced the generic purple mark with the approved **S/check speed mark**, black/white/green wordmark treatment, and **STOP PLANNING. START FINISHING.** slogan.
+- Reworked the PWA icon/metadata to the same black + white + green identity.
+- Made the floating timer smoothly resizable from a true mini panel (184×176 desktop / 172×164 mobile) up to 760×840 with mini, compact, regular, and spacious layouts.
+- Added clickable Overview KPI drilldowns, daily trend-line charts with hover values, and focus-by-project/goal analytics.
+- Added direct **Unarchive** and **Restore to active** actions in GTD/PARA cards.
+- Upgraded Study Tables with XLSX import, row-height resizing, and per-cell bold/background-color formatting while retaining CSV/TSV import/export and Excel export.
+- Preserved the existing Firebase schema, browser database identifier, Autivra migration wire format, record IDs, and imported progress.
+
 # SlamDone V7.3.0 — Daily-Use Upgrade
 
 - Added a purpose-built SlamDone mark and the visible slogan **Plan • Focus • Finish** in the app header/mobile drawer and PWA metadata.
