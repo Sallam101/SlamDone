@@ -24,16 +24,17 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
   PriorityLevel? _priorityFilter;
   String _search = '';
   bool _showDescendants = false;
-  WorkItemVisibilityFilter _visibilityFilter =
-      WorkItemVisibilityFilter.hideArchived;
+  Set<WorkStatus> _visibleStatuses = <WorkStatus>{
+    WorkStatus.active,
+    WorkStatus.completed,
+  };
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final allItems = controller.workItems
         .where(
-          (item) =>
-              !item.isDeleted && item.matchesVisibilityFilter(_visibilityFilter),
+          (item) => !item.isDeleted && _visibleStatuses.contains(item.status),
         )
         .toList();
     final query = _search.trim().toLowerCase();
@@ -114,6 +115,11 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                             const Text(
                               'Clean hierarchy by default. Drag a card onto a higher-level parent, or use Free Canvas for personal placement.',
                             ),
+                            const SizedBox(height: 3),
+                            const Text(
+                              'Wheel pan • Middle drag 4-way • Ctrl+wheel zoom',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
                           ],
                         ),
                       ),
@@ -142,39 +148,49 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                         onSelectionChanged: (value) =>
                             setState(() => _freeCanvas = value.first),
                       ),
-                      SizedBox(
-                        width: 178,
-                        child: DropdownButtonFormField<WorkItemVisibilityFilter>(
-                          initialValue: _visibilityFilter,
-                          isDense: true,
-                          decoration: const InputDecoration(
-                            labelText: 'State',
-                            prefixIcon: Icon(Icons.visibility_outlined, size: 18),
-                          ),
-                          items: WorkItemVisibilityFilter.values
-                              .map(
-                                (value) => DropdownMenuItem(
-                                  value: value,
-                                  child: Text(_visibilityLabel(value)),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _visibilityFilter = value);
-                            }
-                          },
-                        ),
+                      _statusChip(
+                        label: const Text('Active'),
+                        icon: Icons.play_circle_outline,
+                        status: WorkStatus.active,
+                        count: controller.workItems
+                            .where((item) => !item.isDeleted && item.status == WorkStatus.active)
+                            .length,
                       ),
-                      IconButton.filledTonal(
-                        tooltip: 'Filters',
+                      _statusChip(
+                        label: const Text('Completed'),
+                        icon: Icons.check_circle_outline,
+                        status: WorkStatus.completed,
+                        count: controller.workItems
+                            .where((item) => !item.isDeleted && item.status == WorkStatus.completed)
+                            .length,
+                      ),
+                      _statusChip(
+                        label: const Text('Archived'),
+                        icon: Icons.archive_outlined,
+                        status: WorkStatus.archived,
+                        count: controller.workItems
+                            .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
+                            .length,
+                      ),
+                      FilterChip(
+                        avatar: const Icon(Icons.select_all, size: 17),
+                        label: const Text('All'),
+                        selected: _visibleStatuses.length == WorkStatus.values.length,
+                        onSelected: (selected) => setState(() {
+                          _visibleStatuses = selected
+                              ? WorkStatus.values.toSet()
+                              : <WorkStatus>{WorkStatus.active, WorkStatus.completed};
+                        }),
+                      ),
+                      FilledButton.tonalIcon(
                         onPressed: () =>
                             setState(() => _filtersVisible = !_filtersVisible),
                         icon: Icon(
                           _filtersVisible
                               ? Icons.filter_alt_off
-                              : Icons.filter_alt,
+                              : Icons.tune,
                         ),
+                        label: Text(_filtersVisible ? 'Hide filters' : 'More filters'),
                       ),
                       FilledButton.icon(
                         onPressed: () =>
@@ -372,15 +388,34 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
     );
   }
 
-  String _visibilityLabel(WorkItemVisibilityFilter value) => switch (value) {
-    WorkItemVisibilityFilter.hideArchived => 'Active + completed',
-    WorkItemVisibilityFilter.activeOnly => 'Active only',
-    WorkItemVisibilityFilter.completedOnly => 'Completed only',
-    WorkItemVisibilityFilter.archivedOnly => 'Archived only',
-    WorkItemVisibilityFilter.completedAndArchived => 'Completed + archived',
-    WorkItemVisibilityFilter.notCompleted => 'Everything except completed',
-    WorkItemVisibilityFilter.all => 'All items',
-  };
+  Widget _statusChip({
+    required Widget label,
+    required IconData icon,
+    required WorkStatus status,
+    required int count,
+  }) {
+    return FilterChip(
+      avatar: Icon(icon, size: 17),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          label,
+          const SizedBox(width: 5),
+          Text('$count', style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
+      selected: _visibleStatuses.contains(status),
+      onSelected: (_) => _toggleStatus(status),
+    );
+  }
+
+  void _toggleStatus(WorkStatus status) {
+    setState(() {
+      final next = <WorkStatus>{..._visibleStatuses};
+      if (!next.add(status)) next.remove(status);
+      _visibleStatuses = next;
+    });
+  }
 
   Future<void> _directParent(
     BuildContext context,

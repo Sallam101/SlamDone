@@ -4,6 +4,7 @@ import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
 import '../widgets/floating_timer_overlay.dart';
+import '../widgets/slamdone_brand.dart';
 import 'big_picture_screen.dart';
 import 'calendar_screen.dart';
 import 'do_first_screen.dart';
@@ -32,6 +33,7 @@ class _HomeShellState extends State<HomeShell> {
   late final List<Widget> _screens;
   int _lastAutoArchiveSequence = 0;
   Offset _floatingTimerOffset = const Offset(18, 18);
+  Size _floatingTimerSize = const Size(326, 360);
 
   @override
   void initState() {
@@ -82,12 +84,20 @@ class _HomeShellState extends State<HomeShell> {
           key: _scaffoldKey,
           appBar: AppBar(
             toolbarHeight: desktop ? 48 : 56,
+            leading: desktop
+                ? null
+                : IconButton(
+                    tooltip: 'Open SlamDone navigation',
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                    icon: const Icon(Icons.menu_rounded),
+                  ),
             title: Row(
               children: [
-                const Icon(Icons.auto_awesome_mosaic),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text('SlamDone', overflow: TextOverflow.ellipsis),
+                Expanded(
+                  child: SlamDoneBrand(
+                    compact: !desktop,
+                    showSlogan: desktop,
+                  ),
                 ),
                 if (desktop && controller.message != null) ...[
                   const SizedBox(width: 12),
@@ -190,10 +200,13 @@ class _HomeShellState extends State<HomeShell> {
                     child: ListView(
                       padding: const EdgeInsets.all(8),
                       children: [
-                        const ListTile(
-                          leading: Icon(Icons.auto_awesome_mosaic),
-                          title: Text('SlamDone'),
-                          subtitle: Text('All planner sections'),
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(12, 12, 12, 10),
+                          child: SlamDoneBrand(compact: false, showSlogan: true),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('All planner sections'),
                         ),
                         ListTile(
                           dense: true,
@@ -230,11 +243,22 @@ class _HomeShellState extends State<HomeShell> {
                 ),
           body: LayoutBuilder(
             builder: (context, bodyConstraints) {
-              final timerWidth = desktop ? 326.0 : 286.0;
-              final maxLeft = (bodyConstraints.maxWidth - timerWidth - 8)
+              final minTimerWidth = desktop ? 286.0 : 250.0;
+              final minTimerHeight = desktop ? 310.0 : 286.0;
+              final maxTimerWidth = (bodyConstraints.maxWidth - 16)
+                  .clamp(minTimerWidth, 620.0)
+                  .toDouble();
+              final maxTimerHeight = (bodyConstraints.maxHeight - 16)
+                  .clamp(minTimerHeight, 720.0)
+                  .toDouble();
+              final timerSize = Size(
+                _floatingTimerSize.width.clamp(minTimerWidth, maxTimerWidth).toDouble(),
+                _floatingTimerSize.height.clamp(minTimerHeight, maxTimerHeight).toDouble(),
+              );
+              final maxLeft = (bodyConstraints.maxWidth - timerSize.width - 8)
                   .clamp(0.0, double.infinity)
                   .toDouble();
-              final maxTop = (bodyConstraints.maxHeight - 330)
+              final maxTop = (bodyConstraints.maxHeight - timerSize.height - 8)
                   .clamp(0.0, double.infinity)
                   .toDouble();
               final left = _floatingTimerOffset.dx.clamp(0.0, maxLeft).toDouble();
@@ -252,7 +276,20 @@ class _HomeShellState extends State<HomeShell> {
                       child: SlamDoneFloatingTimerOverlay(
                         controller: controller,
                         compact: !desktop,
+                        size: timerSize,
                         onClose: controller.hideFloatingTimer,
+                        onResizeDelta: (delta) {
+                          setState(() {
+                            _floatingTimerSize = Size(
+                              (timerSize.width + delta.dx)
+                                  .clamp(minTimerWidth, maxTimerWidth)
+                                  .toDouble(),
+                              (timerSize.height + delta.dy)
+                                  .clamp(minTimerHeight, maxTimerHeight)
+                                  .toDouble(),
+                            );
+                          });
+                        },
                         onDragDelta: (delta) {
                           setState(() {
                             _floatingTimerOffset = Offset(

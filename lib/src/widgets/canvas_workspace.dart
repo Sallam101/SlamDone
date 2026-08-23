@@ -102,7 +102,9 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
       for (final item in widget.items) item.id: item.parentId,
     };
 
-    return ClipRRect(
+    return MouseRegion(
+      cursor: _middleMousePanning ? SystemMouseCursors.move : MouseCursor.defer,
+      child: ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: ColoredBox(
         color: scheme.surfaceContainerLowest,
@@ -190,6 +192,22 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
             ),
             ),
             Positioned(
+              left: 14,
+              bottom: 14,
+              child: IgnorePointer(
+                child: Card(
+                  elevation: 2,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    child: Text(
+                      'Wheel pan • Middle drag 4-way • Ctrl+wheel zoom',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
               right: 14,
               bottom: 14,
               child: Card(
@@ -221,6 +239,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

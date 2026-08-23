@@ -17,6 +17,15 @@ Production URL after Pages is enabled:
 
 The planner UI writes to local SQLite first. SlamDone then queues changed records for Firestore. Cloud records merge back into local SQLite using the existing Autivra ordering: higher revision, then newer `client_updated_at`, then device ID as deterministic tie-break.
 
+## SlamDone 7.3 daily-use upgrade
+
+- Branded SlamDone header/drawer with **Plan • Focus • Finish**.
+- Big Picture quick status toggles for Active, Completed, Archived, and All.
+- Journal period filters (Week/Month/Year/All) and four display densities.
+- Resizable floating timer.
+- Consistent spatial navigation guidance: wheel pan, middle-drag 4-way pan, Ctrl+wheel zoom.
+- Explicit phone hamburger navigation with every planner section in the drawer.
+
 ## SlamDone 7.2 workflow improvements
 
 - Completing a nested **Task** starts a four-second **Undo** grace period, then archives it automatically. Parent goals/projects are never auto-archived.

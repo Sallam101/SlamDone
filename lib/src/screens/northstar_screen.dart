@@ -155,7 +155,9 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
           ),
           const SizedBox(height: 10),
           Expanded(
-            child: DecoratedBox(
+            child: MouseRegion(
+              cursor: _middleMousePanning ? SystemMouseCursors.move : MouseCursor.defer,
+              child: DecoratedBox(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(18),
@@ -311,6 +313,22 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
                       ),
                     ),
                   Positioned(
+                    left: 14,
+                    bottom: 14,
+                    child: IgnorePointer(
+                      child: Card(
+                        elevation: 2,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          child: Text(
+                            'Wheel pan • Middle drag 4-way • Ctrl+wheel zoom',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
                     right: 14,
                     bottom: 14,
                     child: Card(
@@ -339,6 +357,7 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),

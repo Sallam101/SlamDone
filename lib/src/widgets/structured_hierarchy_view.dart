@@ -226,7 +226,9 @@ class _StructuredHierarchyViewState extends State<StructuredHierarchyView> {
           ),
         );
 
-        return Listener(
+        return MouseRegion(
+          cursor: _middleMousePanning ? SystemMouseCursors.move : MouseCursor.defer,
+          child: Listener(
           behavior: HitTestBehavior.translucent,
           onPointerSignal: _handlePointerSignal,
           onPointerDown: _handlePointerDown,
@@ -272,6 +274,20 @@ class _StructuredHierarchyViewState extends State<StructuredHierarchyView> {
               ),
             ),
             Positioned(
+              left: 18,
+              bottom: 24,
+              child: Card(
+                elevation: 2,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  child: Text(
+                    'Wheel pan • Middle drag 4-way • Ctrl+wheel zoom',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
               right: 24,
               bottom: 24,
               child: Card(
@@ -298,6 +314,7 @@ class _StructuredHierarchyViewState extends State<StructuredHierarchyView> {
               ),
             ),
             ],
+          ),
           ),
         );
       },

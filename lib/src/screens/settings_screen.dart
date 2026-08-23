@@ -385,9 +385,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         const SizedBox(height: 12),
         _section(context, 'Local data', [
-          SelectableText('Database: ${controller.database.databasePath}'),
+          const Text('SlamDone browser database'),
           const Text(
-            'This is the browser database used by the GitHub/PWA version. App updates do not intentionally clear it; keep cloud sync or periodic JSON backups enabled for recovery.',
+            'Your browser storage keeps the legacy internal database key for migration compatibility. Visible SlamDone branding and cloud sync are unaffected; app updates do not intentionally clear this data.',
           ),
         ]),
       ],

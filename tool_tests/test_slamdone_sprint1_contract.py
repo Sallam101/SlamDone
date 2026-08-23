@@ -16,7 +16,7 @@ class SlamDoneSprint1ContractTest(unittest.TestCase):
         branding = self.read('tools/brand_web.py')
         self.assertIn('name: slamdone', pubspec)
         self.assertIn("title: 'SlamDone'", app)
-        self.assertIn("Text('SlamDone'", home)
+        self.assertIn('SlamDoneBrand(', home)
         self.assertIn('flutter create --platforms=web --project-name=slamdone .', workflow)
         self.assertIn('flutter build web --release --base-href /SlamDone/', workflow)
         self.assertIn("'name': 'SlamDone'", branding)
@@ -41,9 +41,10 @@ class SlamDoneSprint1ContractTest(unittest.TestCase):
         big = self.read('lib/src/screens/big_picture_screen.dart')
         mind = self.read('lib/src/screens/mind_map_screen.dart')
         self.assertIn('enum WorkItemVisibilityFilter', models)
-        self.assertIn('WorkItemVisibilityFilter.hideArchived', big)
+        self.assertIn('Set<WorkStatus> _visibleStatuses', big)
+        self.assertIn('WorkStatus.active', big)
+        self.assertIn('WorkStatus.completed', big)
         self.assertIn('WorkItemVisibilityFilter.hideArchived', mind)
-        self.assertIn('matchesVisibilityFilter', big)
         self.assertIn('matchesVisibilityFilter', mind)
 
     def test_all_spatial_views_gate_wheel_zoom_and_support_middle_pan(self):

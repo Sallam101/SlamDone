@@ -13,12 +13,16 @@ class SlamDoneFloatingTimerOverlay extends StatefulWidget {
     required this.controller,
     required this.onClose,
     required this.onDragDelta,
+    required this.onResizeDelta,
+    required this.size,
     this.compact = false,
   });
 
   final AppController controller;
   final VoidCallback onClose;
   final ValueChanged<Offset> onDragDelta;
+  final ValueChanged<Offset> onResizeDelta;
+  final Size size;
   final bool compact;
 
   @override
@@ -37,209 +41,269 @@ class _SlamDoneFloatingTimerOverlayState
     Color(0xFFC62828),
     Color(0xFFEF6C00),
     Color(0xFF455A64),
+    Color(0xFFAD1457),
+    Color(0xFF2E7D32),
   ];
 
   @override
   Widget build(BuildContext context) {
     final engine = widget.controller.timerEngine;
     final accent = _timerColors[_colorIndex % _timerColors.length];
-    final width = widget.compact ? 286.0 : 326.0;
+    final dialSize = math
+        .min(widget.size.width - 64, widget.size.height - 174)
+        .clamp(104.0, 196.0)
+        .toDouble();
+
     return Material(
       elevation: 18,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       color: Theme.of(context).colorScheme.surface,
       child: SizedBox(
-        width: width,
-        child: AnimatedBuilder(
-          animation: engine,
-          builder: (context, _) {
-            final state = engine.state;
-            final displaySeconds = state.mode == TimerMode.stopwatch
-                ? state.elapsedSeconds
-                : state.remainingSeconds;
-            final progress = state.mode == TimerMode.stopwatch
-                ? 0.0
-                : engine.progress.clamp(0, 1).toDouble();
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanUpdate: (details) => widget.onDragDelta(details.delta),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-                    color: accent.withValues(alpha: .14),
-                    child: Row(
-                      children: [
-                        Icon(Icons.drag_indicator, color: accent),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SlamDone Floating Timer',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              Text(
-                                state.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuButton<int>(
-                          tooltip: 'Timer color',
-                          icon: const Icon(Icons.palette_outlined),
-                          onSelected: (value) =>
-                              setState(() => _colorIndex = value),
-                          itemBuilder: (context) => List.generate(
-                            _timerColors.length,
-                            (index) => PopupMenuItem<int>(
-                              value: index,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 20,
-                                    height: 20,
-                                    decoration: BoxDecoration(
-                                      color: _timerColors[index],
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text('Color ${index + 1}'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Close floating timer',
-                          onPressed: widget.onClose,
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.all(widget.compact ? 12 : 16),
-                  child: Column(
+        width: widget.size.width,
+        height: widget.size.height,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: engine,
+                builder: (context, _) {
+                  final state = engine.state;
+                  final displaySeconds = state.mode == TimerMode.stopwatch
+                      ? state.elapsedSeconds
+                      : state.remainingSeconds;
+                  final progress = state.mode == TimerMode.stopwatch
+                      ? 0.0
+                      : engine.progress.clamp(0, 1).toDouble();
+                  return Column(
                     children: [
-                      SizedBox(
-                        width: widget.compact ? 150 : 172,
-                        height: widget.compact ? 150 : 172,
-                        child: CustomPaint(
-                          painter: _TimerDialPainter(
-                            progress: progress,
-                            accent: accent,
-                            stopwatch: state.mode == TimerMode.stopwatch,
-                            elapsedSeconds: state.elapsedSeconds,
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onPanUpdate: (details) =>
+                            widget.onDragDelta(details.delta),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.move,
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(14, 9, 8, 9),
+                            color: accent.withValues(alpha: .14),
+                            child: Row(
                               children: [
-                                Text(
-                                  engine.formatSeconds(displaySeconds),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w900,
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
+                                Icon(Icons.drag_indicator, color: accent),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'SlamDone Floating Timer',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      Text(
+                                        state.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuButton<int>(
+                                  tooltip: 'Timer color',
+                                  icon: const Icon(Icons.palette_outlined),
+                                  onSelected: (value) =>
+                                      setState(() => _colorIndex = value),
+                                  itemBuilder: (context) => List.generate(
+                                    _timerColors.length,
+                                    (index) => PopupMenuItem<int>(
+                                      value: index,
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 20,
+                                            height: 20,
+                                            decoration: BoxDecoration(
+                                              color: _timerColors[index],
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Text('Color ${index + 1}'),
                                         ],
                                       ),
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  state.mode == TimerMode.stopwatch
-                                      ? 'STOPWATCH'
-                                      : state.mode.name.toUpperCase(),
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(
-                                        color: accent,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: .8,
-                                      ),
+                                IconButton(
+                                  tooltip: 'Close floating timer',
+                                  onPressed: widget.onClose,
+                                  icon: const Icon(Icons.close),
                                 ),
                               ],
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (!engine.isActive)
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent,
-                              ),
-                              onPressed: () => engine.start(
-                                mode: TimerMode.general,
-                                title: 'General focus',
-                                durationMinutes:
-                                    widget.controller.defaultSessionMinutes,
-                              ),
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text('Start'),
-                            )
-                          else if (state.paused)
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent,
-                              ),
-                              onPressed: engine.resume,
-                              icon: const Icon(Icons.play_arrow),
-                              label: const Text('Resume'),
-                            )
-                          else
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent,
-                              ),
-                              onPressed: engine.pause,
-                              icon: const Icon(Icons.pause),
-                              label: const Text('Pause'),
-                            ),
-                          OutlinedButton.icon(
-                            onPressed: engine.reset,
-                            icon: const Icon(Icons.restart_alt),
-                            label: const Text('Reset'),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            widget.compact ? 12 : 16,
+                            12,
+                            widget.compact ? 12 : 16,
+                            28,
                           ),
-                          OutlinedButton.icon(
-                            onPressed: () => engine.stop(saveSession: true),
-                            icon: const Icon(Icons.stop_circle_outlined),
-                            label: const Text('Log & stop'),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                width: dialSize,
+                                height: dialSize,
+                                child: CustomPaint(
+                                  painter: _TimerDialPainter(
+                                    progress: progress,
+                                    accent: accent,
+                                    stopwatch:
+                                        state.mode == TimerMode.stopwatch,
+                                    elapsedSeconds: state.elapsedSeconds,
+                                  ),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            engine.formatSeconds(displaySeconds),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w900,
+                                                  fontFeatures: const [
+                                                    FontFeature.tabularFigures(),
+                                                  ],
+                                                ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          state.mode == TimerMode.stopwatch
+                                              ? 'STOPWATCH'
+                                              : state.mode.name.toUpperCase(),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: accent,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: .8,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  if (!engine.isActive)
+                                    FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: accent,
+                                      ),
+                                      onPressed: () => engine.start(
+                                        mode: TimerMode.general,
+                                        title: 'General focus',
+                                        durationMinutes: widget.controller
+                                            .defaultSessionMinutes,
+                                      ),
+                                      icon: const Icon(Icons.play_arrow),
+                                      label: const Text('Start'),
+                                    )
+                                  else if (state.paused)
+                                    FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: accent,
+                                      ),
+                                      onPressed: engine.resume,
+                                      icon: const Icon(Icons.play_arrow),
+                                      label: const Text('Resume'),
+                                    )
+                                  else
+                                    FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: accent,
+                                      ),
+                                      onPressed: engine.pause,
+                                      icon: const Icon(Icons.pause),
+                                      label: const Text('Pause'),
+                                    ),
+                                  OutlinedButton.icon(
+                                    onPressed: engine.reset,
+                                    icon: const Icon(Icons.restart_alt),
+                                    label: const Text('Reset'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: () =>
+                                        engine.stop(saveSession: true),
+                                    icon: const Icon(
+                                      Icons.stop_circle_outlined,
+                                    ),
+                                    label: const Text('Log & stop'),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () => engine.start(
+                                      mode: TimerMode.stopwatch,
+                                      title: 'Study stopwatch',
+                                    ),
+                                    icon: const Icon(Icons.hourglass_bottom),
+                                    label: const Text('Stopwatch'),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          TextButton.icon(
-                            onPressed: () => engine.start(
-                              mode: TimerMode.stopwatch,
-                              title: 'Study stopwatch',
-                            ),
-                            icon: const Icon(Icons.hourglass_bottom),
-                            label: const Text('Stopwatch'),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: (details) => widget.onResizeDelta(details.delta),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeDownRight,
+                  child: IconButton(
+                    tooltip: 'Resize timer',
+                    onPressed: () {},
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      Icons.open_in_full_rounded,
+                      size: 18,
+                      color: accent,
+                    ),
                   ),
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,3 +1,21 @@
+# SlamDone V7.3.0 — Daily-Use Upgrade
+
+- Added a purpose-built SlamDone mark and the visible slogan **Plan • Focus • Finish** in the app header/mobile drawer and PWA metadata.
+- Replaced the Big Picture state dropdown with independent **Active / Completed / Archived / All** toggle chips while keeping advanced filters collapsible.
+- Added Journal **Week / Month / Year / All** period filtering with previous/next navigation.
+- Added Journal **Large / Medium / Small / List** review layouts.
+- Made the in-app floating timer resizable with bounded drag-resize behavior and adaptive dial/control layout.
+- Added visible spatial-navigation guidance and middle-pan cursor feedback to Structured Big Picture, Free Canvas/Mind Map, and NorthStar.
+- Added an explicit mobile hamburger button and branded all-sections drawer.
+- Hid the legacy `supeslam.db` filename from product-facing Settings while retaining the internal key for migration/data compatibility.
+- Preserved Firebase schema, imported Autivra record IDs, migration wire format, auto-archive Undo policy, and existing cloud sync.
+
+# SlamDone V7.2.2
+
+- GitHub Actions hotfix: remove Flutter's generated `test/widget_test.dart` immediately after `flutter create`.
+- Prevents the obsolete template `MyApp()` test from failing CI before the SlamDone web build.
+- Added a repository regression contract requiring the cleanup step before `flutter test`.
+
 # Changelog
 
 ## 7.2.0 SlamDone Sprint 1 + floating timer
