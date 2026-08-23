@@ -102,7 +102,7 @@ class _WorkItemTreeListState extends State<WorkItemTreeList> {
                       ),
                     )
                   else
-                    const SizedBox(width: 40),
+                    SizedBox(width: compact ? 4 : 40),
                   Checkbox(
                     value: completed,
                     onChanged: (value) => widget.controller
@@ -267,23 +267,63 @@ class _WorkItemTreeListState extends State<WorkItemTreeList> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => showQuickFocusDialog(
-                      context,
-                      widget.controller,
-                      item: item,
-                    ),
-                    icon: const Icon(Icons.timer_outlined),
-                  ),
-                  if (widget.allowEditing)
+                  if (compact)
+                    PopupMenuButton<String>(
+                      tooltip: 'Task actions',
+                      onSelected: (value) {
+                        if (value == 'focus') {
+                          showQuickFocusDialog(
+                            context,
+                            widget.controller,
+                            item: item,
+                          );
+                        } else if (value == 'edit' && widget.allowEditing) {
+                          showWorkItemEditor(
+                            context,
+                            widget.controller,
+                            item: item,
+                          );
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem<String>(
+                          value: 'focus',
+                          child: ListTile(
+                            dense: true,
+                            leading: Icon(Icons.timer_outlined),
+                            title: Text('Focus'),
+                          ),
+                        ),
+                        if (widget.allowEditing)
+                          const PopupMenuItem<String>(
+                            value: 'edit',
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(Icons.edit_outlined),
+                              title: Text('Edit'),
+                            ),
+                          ),
+                      ],
+                    )
+                  else ...[
                     IconButton(
-                      onPressed: () => showWorkItemEditor(
+                      onPressed: () => showQuickFocusDialog(
                         context,
                         widget.controller,
                         item: item,
                       ),
-                      icon: const Icon(Icons.edit_outlined),
+                      icon: const Icon(Icons.timer_outlined),
                     ),
+                    if (widget.allowEditing)
+                      IconButton(
+                        onPressed: () => showWorkItemEditor(
+                          context,
+                          widget.controller,
+                          item: item,
+                        ),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                  ],
                 ],
               ),
             ),

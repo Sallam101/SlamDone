@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
@@ -27,8 +29,9 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  AppController? _lifecycleController;
   final ScrollController _tabScrollController = ScrollController();
   late final List<Widget> _screens;
   int _lastAutoArchiveSequence = 0;
@@ -41,6 +44,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _screens = AppSection.values
         .map(
           (section) => KeyedSubtree(
@@ -52,7 +56,24 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _lifecycleController = AppScope.of(context);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final controller = _lifecycleController;
+      if (controller != null) {
+        unawaited(controller.syncService.handleAppResumed());
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabScrollController.dispose();
     _floatingTimerPageScroll.dispose();
     super.dispose();

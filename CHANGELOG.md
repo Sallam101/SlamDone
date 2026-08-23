@@ -1,3 +1,11 @@
+# SlamDone V7.6.0 — Mobile Reliability
+
+- Phone changes now schedule a prompt debounced Firestore push instead of relying only on the 15-second timer.
+- Returning to SlamDone resumes realtime listeners and reconciles cloud/local state.
+- Habits use phone-first daily cards with large checkbox logging and +/- number controls.
+- Tasks use a compact phone toolbar and overflow actions so nested task titles/checklists keep usable width.
+- Big Picture defaults to a vertical hierarchy on phone, with Canvas optional; desktop Structured/Free Canvas remains unchanged.
+
 # SlamDone V7.5.2
 
 - Big Picture header can now tuck secondary controls while keeping Big Picture, Active, Completed, Archived, and + Goal visible.

@@ -27,8 +27,9 @@ class SlamDoneV751FilterContractTest(unittest.TestCase):
         self.assertNotIn("selected: _visibleStatuses.length == WorkStatus.values.length", big)
 
 
-    def test_version_is_v751(self):
-        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.5\.[1-9]\+[0-9]+')
+    def test_version_is_v751_or_later(self):
+        pubspec = self.read('pubspec.yaml')
+        self.assertRegex(pubspec, r'version: 7\.(?:[6-9]|5\.[1-9])[0-9.]*\+[0-9]+')
 
 
 if __name__ == '__main__':

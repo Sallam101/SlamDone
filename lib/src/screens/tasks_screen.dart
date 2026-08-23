@@ -21,6 +21,7 @@ class _TasksScreenState extends State<TasksScreen> {
   WorkItemType? _level;
   String _search = '';
   bool _includeDescendants = false;
+  bool _mobileFiltersVisible = false;
   bool _loaded = false;
 
   @override
@@ -50,6 +51,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final now = DateTime.now();
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     final eligible = controller.workItems.where((item) {
       if (item.isDeleted || item.status == WorkStatus.archived) return false;
       if (_search.isNotEmpty &&
@@ -103,152 +105,215 @@ class _TasksScreenState extends State<TasksScreen> {
     });
 
     return Padding(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(mobile ? 8 : 14),
       child: Column(
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 250,
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search),
-                          labelText: 'Search',
-                          isDense: true,
-                        ),
-                        onChanged: (value) => setState(() => _search = value),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 190,
-                      child: DropdownButtonFormField<WorkItemType?>(
-                        initialValue: _level,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Level',
-                          isDense: true,
-                        ),
-                        items: [
-                          const DropdownMenuItem<WorkItemType?>(
-                            value: null,
-                            child: Text('All levels'),
-                          ),
-                          ...WorkItemType.values.map(
-                            (value) => DropdownMenuItem<WorkItemType?>(
-                              value: value,
-                              child: Text(value.name),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _level = value);
-                          unawaited(
-                            controller.writeUiSetting(
-                              'tasks_level',
-                              value?.name ?? '',
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      selected: _includeDescendants,
-                      label: const Text('Show descendants'),
-                      avatar: const Icon(Icons.account_tree_outlined, size: 18),
-                      onSelected: _level == null
-                          ? null
-                          : (value) {
-                              setState(() => _includeDescendants = value);
-                              unawaited(
-                                controller.writeUiSetting(
-                                  'tasks_descendants',
-                                  value.toString(),
-                                ),
-                              );
-                            },
-                    ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 230,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _filter,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Due / status sort',
-                          isDense: true,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'default',
-                            child: Text('Due, overdue, then undated'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'overdue',
-                            child: Text('Overdue'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'today',
-                            child: Text('Due today'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'week',
-                            child: Text('Due this week'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'month',
-                            child: Text('Due this month'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'completed',
-                            child: Text('Completed'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'undated',
-                            child: Text('Not dated'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'all',
-                            child: Text('Show all'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          final next = value ?? 'default';
-                          setState(() => _filter = next);
-                          unawaited(
-                            controller.writeUiSetting('tasks_filter', next),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    FilledButton.icon(
-                      onPressed: () => showWorkItemEditor(
-                        context,
-                        controller,
-                        initialType: WorkItemType.task,
-                      ),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Task'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
+          mobile
+              ? _buildMobileToolbar(context, controller)
+              : _buildDesktopToolbar(context, controller),
+          const SizedBox(height: 8),
           Expanded(
             child: WorkItemTreeList(controller: controller, items: items),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMobileToolbar(
+    BuildContext context,
+    AppController controller,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search, size: 20),
+                      hintText: 'Search tasks',
+                      isDense: true,
+                    ),
+                    onChanged: (value) => setState(() => _search = value),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  tooltip: 'Task filters',
+                  onPressed: () => setState(
+                    () => _mobileFiltersVisible = !_mobileFiltersVisible,
+                  ),
+                  icon: const Icon(Icons.filter_alt_outlined),
+                ),
+                const SizedBox(width: 6),
+                IconButton.filled(
+                  tooltip: 'Add task',
+                  onPressed: () => showWorkItemEditor(
+                    context,
+                    controller,
+                    initialType: WorkItemType.task,
+                  ),
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              child: !_mobileFiltersVisible
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Column(
+                        children: [
+                          _levelDropdown(controller, fullWidth: true),
+                          const SizedBox(height: 8),
+                          _statusDropdown(controller, fullWidth: true),
+                          if (_level != null)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: FilterChip(
+                                selected: _includeDescendants,
+                                label: const Text('Show descendants'),
+                                avatar: const Icon(
+                                  Icons.account_tree_outlined,
+                                  size: 18,
+                                ),
+                                onSelected: (value) =>
+                                    _setDescendants(controller, value),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopToolbar(
+    BuildContext context,
+    AppController controller,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 250,
+                child: TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    labelText: 'Search',
+                    isDense: true,
+                  ),
+                  onChanged: (value) => setState(() => _search = value),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _levelDropdown(controller),
+              const SizedBox(width: 8),
+              FilterChip(
+                selected: _includeDescendants,
+                label: const Text('Show descendants'),
+                avatar: const Icon(Icons.account_tree_outlined, size: 18),
+                onSelected: _level == null
+                    ? null
+                    : (value) => _setDescendants(controller, value),
+              ),
+              const SizedBox(width: 10),
+              _statusDropdown(controller),
+              const SizedBox(width: 10),
+              FilledButton.icon(
+                onPressed: () => showWorkItemEditor(
+                  context,
+                  controller,
+                  initialType: WorkItemType.task,
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Task'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _levelDropdown(AppController controller, {bool fullWidth = false}) {
+    return SizedBox(
+      width: fullWidth ? double.infinity : 190,
+      child: DropdownButtonFormField<WorkItemType?>(
+        initialValue: _level,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Level', isDense: true),
+        items: [
+          const DropdownMenuItem<WorkItemType?>(
+            value: null,
+            child: Text('All levels'),
+          ),
+          ...WorkItemType.values.map(
+            (value) => DropdownMenuItem<WorkItemType?>(
+              value: value,
+              child: Text(value.name),
+            ),
+          ),
+        ],
+        onChanged: (value) {
+          setState(() => _level = value);
+          unawaited(
+            controller.writeUiSetting('tasks_level', value?.name ?? ''),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _statusDropdown(AppController controller, {bool fullWidth = false}) {
+    return SizedBox(
+      width: fullWidth ? double.infinity : 230,
+      child: DropdownButtonFormField<String>(
+        initialValue: _filter,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Due / status',
+          isDense: true,
+        ),
+        items: const [
+          DropdownMenuItem(
+            value: 'default',
+            child: Text('Due, overdue, then undated'),
+          ),
+          DropdownMenuItem(value: 'overdue', child: Text('Overdue')),
+          DropdownMenuItem(value: 'today', child: Text('Due today')),
+          DropdownMenuItem(value: 'week', child: Text('Due this week')),
+          DropdownMenuItem(value: 'month', child: Text('Due this month')),
+          DropdownMenuItem(value: 'completed', child: Text('Completed')),
+          DropdownMenuItem(value: 'undated', child: Text('Not dated')),
+          DropdownMenuItem(value: 'all', child: Text('Show all')),
+        ],
+        onChanged: (value) {
+          final next = value ?? 'default';
+          setState(() => _filter = next);
+          unawaited(controller.writeUiSetting('tasks_filter', next));
+        },
+      ),
+    );
+  }
+
+  void _setDescendants(AppController controller, bool value) {
+    setState(() => _includeDescendants = value);
+    unawaited(
+      controller.writeUiSetting('tasks_descendants', value.toString()),
     );
   }
 }

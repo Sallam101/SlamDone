@@ -9,6 +9,7 @@ import '../widgets/focus_dialogs.dart';
 import '../widgets/hierarchy_layout.dart';
 import '../widgets/structured_hierarchy_view.dart';
 import '../widgets/work_item_dialogs.dart';
+import '../widgets/work_item_tree_list.dart';
 
 class BigPictureScreen extends StatefulWidget {
   const BigPictureScreen({super.key});
@@ -38,6 +39,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
     if (_controlPreferenceLoaded) return;
     _controlPreferenceLoaded = true;
     final controller = AppScope.of(context);
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     controller.readUiSetting('big_picture_controls_expanded').then((saved) {
       if (!mounted || saved == null) return;
       setState(() => _controlsExpanded = saved == 'true');
@@ -186,18 +188,31 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 SegmentedButton<bool>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: false,
-                                      label: Text('Structured'),
-                                      icon: Icon(Icons.account_tree),
-                                    ),
-                                    ButtonSegment(
-                                      value: true,
-                                      label: Text('Free Canvas'),
-                                      icon: Icon(Icons.open_with),
-                                    ),
-                                  ],
+                                  segments: mobile
+                                      ? const [
+                                          ButtonSegment(
+                                            value: false,
+                                            label: Text('Hierarchy'),
+                                            icon: Icon(Icons.format_list_bulleted),
+                                          ),
+                                          ButtonSegment(
+                                            value: true,
+                                            label: Text('Canvas'),
+                                            icon: Icon(Icons.open_with),
+                                          ),
+                                        ]
+                                      : const [
+                                          ButtonSegment(
+                                            value: false,
+                                            label: Text('Structured'),
+                                            icon: Icon(Icons.account_tree),
+                                          ),
+                                          ButtonSegment(
+                                            value: true,
+                                            label: Text('Free Canvas'),
+                                            icon: Icon(Icons.open_with),
+                                          ),
+                                        ],
                                   selected: {_freeCanvas},
                                   onSelectionChanged: (value) =>
                                       setState(() => _freeCanvas = value.first),
@@ -325,7 +340,12 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
-              child: _freeCanvas
+              child: mobile && !_freeCanvas
+                  ? WorkItemTreeList(
+                      controller: controller,
+                      items: visible,
+                    )
+                  : _freeCanvas
                   ? CanvasWorkspace(
                       items: visibleHierarchyItems(
                         items: visible,

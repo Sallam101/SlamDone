@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
 import '../utils/app_utils.dart';
@@ -13,6 +14,7 @@ class HabitsScreen extends StatefulWidget {
 
 class _HabitsScreenState extends State<HabitsScreen> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime _mobileDate = DateTime.now();
   final ScrollController _horizontal = ScrollController();
   final ScrollController _vertical = ScrollController();
   double? _nameWidth;
@@ -47,6 +49,10 @@ class _HabitsScreenState extends State<HabitsScreen> {
     final controller = AppScope.of(context);
     final habits = controller.habits.where((habit) => !habit.isDeleted).toList()
       ..sort((a, b) => a.sortKey.compareTo(b.sortKey));
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 700) {
+      return _buildMobileHabits(context, controller, habits);
+    }
     final days = DateTime(_month.year, _month.month + 1, 0).day;
     final prefix =
         '${_month.year.toString().padLeft(4, '0')}-${_month.month.toString().padLeft(2, '0')}';
@@ -225,6 +231,232 @@ class _HabitsScreenState extends State<HabitsScreen> {
       ),
     );
   }
+
+  Widget _buildMobileHabits(
+    BuildContext context,
+    AppController controller,
+    List<Habit> habits,
+  ) {
+    final selectedKey = dateKey(_mobileDate);
+    final values = <String, double>{
+      for (final entry in controller.habitEntries.where(
+        (entry) => entry.entryDate == selectedKey,
+      ))
+        entry.habitId: entry.value,
+    };
+    final today = DateTime.now();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+      child: Column(
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Previous day',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => setState(() {
+                          _mobileDate = _mobileDate.subtract(const Duration(days: 1));
+                        }),
+                        icon: const Icon(Icons.chevron_left),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _mobileDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null && mounted) {
+                              setState(() => _mobileDate = picked);
+                            }
+                          },
+                          child: Text(
+                            _mobileDayLabel(_mobileDate),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Next day',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () => setState(() {
+                          _mobileDate = _mobileDate.add(const Duration(days: 1));
+                        }),
+                        icon: const Icon(Icons.chevron_right),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: sameDay(_mobileDate, today)
+                              ? null
+                              : () => setState(() => _mobileDate = today),
+                          icon: const Icon(Icons.today_outlined, size: 18),
+                          label: const Text('Today'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => _addHabit(context),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Habit'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: habits.isEmpty
+                ? const Center(child: Text('No habits yet. Add one above.'))
+                : ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 100),
+                    itemCount: habits.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 7),
+                    itemBuilder: (context, index) {
+                      final habit = habits[index];
+                      final value = values[habit.id] ?? 0;
+                      return Card(
+                        color: parseHexColor(habit.colorHex),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          habit.title,
+                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                            color: parseHexColor(habit.textColorHex),
+                                          ),
+                                        ),
+                                        if (habit.notes.isNotEmpty)
+                                          Text(
+                                            habit.notes,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Edit habit',
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () => _editHabit(context, habit),
+                                    icon: const Icon(Icons.more_horiz),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (habit.kind == HabitKind.checkbox)
+                                SizedBox(
+                                  height: 48,
+                                  child: FilledButton.tonalIcon(
+                                    onPressed: () => controller.setHabitValue(
+                                      habit,
+                                      selectedKey,
+                                      value > 0 ? 0 : 1,
+                                    ),
+                                    icon: Icon(
+                                      value > 0
+                                          ? Icons.check_circle
+                                          : Icons.radio_button_unchecked,
+                                    ),
+                                    label: Text(value > 0 ? 'Logged ✓' : 'Log for this day'),
+                                  ),
+                                )
+                              else
+                                Row(
+                                  children: [
+                                    IconButton.filledTonal(
+                                      tooltip: 'Decrease',
+                                      onPressed: () => controller.setHabitValue(
+                                        habit,
+                                        selectedKey,
+                                        (value - 1).clamp(0, double.infinity).toDouble(),
+                                      ),
+                                      icon: const Icon(Icons.remove_rounded),
+                                    ),
+                                    Expanded(
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () => _numberInput(
+                                          context,
+                                          habit,
+                                          selectedKey,
+                                          value,
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                _mobileNumber(value),
+                                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                              if (habit.unit.isNotEmpty) Text(habit.unit),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton.filled(
+                                      tooltip: 'Increase',
+                                      onPressed: () => controller.setHabitValue(
+                                        habit,
+                                        selectedKey,
+                                        value + 1,
+                                      ),
+                                      icon: const Icon(Icons.add_rounded),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _mobileDayLabel(DateTime value) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${days[value.weekday - 1]} • ${months[value.month - 1]} ${value.day}, ${value.year}';
+  }
+
+  String _mobileNumber(double value) =>
+      value == value.roundToDouble() ? value.toInt().toString() : value.toStringAsFixed(1);
 
   void _changeMonth(int delta) {
     setState(() => _month = DateTime(_month.year, _month.month + delta));

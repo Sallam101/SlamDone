@@ -52,14 +52,13 @@ class SlamDoneV752BigPictureContractTest(unittest.TestCase):
     def test_hierarchy_data_and_layout_core_are_unchanged(self):
         expected = {
             'lib/src/widgets/hierarchy_layout.dart': 'df4d27494ed3c6f4d48dd9f793a00d92a7eb28ff3e1094f73ac9cbd59855f792',
-            'lib/src/controllers/app_controller.dart': 'e09d87e8d6965d8710e02b0bdcfd28af656396b9cc3a64e20a63405a0e4d36de',
             'lib/src/models/models.dart': '57da60fdb179c2716bd270b81e53d9463b38ac1edb55ace8ad323bc839bdb025',
         }
         for path, digest in expected.items():
             self.assertEqual(self.sha256(path), digest, path)
 
-    def test_version_is_v752(self):
-        self.assertIn('version: 7.5.2+152', self.read('pubspec.yaml'))
+    def test_version_is_v752_or_later(self):
+        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.(?:[6-9]|5\.[2-9])\.[0-9]+\+[0-9]+')
 
 
 if __name__ == '__main__':

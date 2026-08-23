@@ -21,6 +21,7 @@ class SyncService extends ChangeNotifier {
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   StreamSubscription<User?>? _authSubscription;
   Timer? _periodicTimer;
+  Timer? _scheduledPushTimer;
   bool _busy = false;
   String _status = 'Browser local';
   Object? _lastError;
@@ -90,6 +91,32 @@ class SyncService extends ChangeNotifier {
       const Duration(seconds: 15),
       (_) => unawaited(syncNow(silent: true, pullRemote: false)),
     );
+  }
+
+
+  void schedulePush({
+    Duration delay = const Duration(milliseconds: 450),
+  }) {
+    if (_mode != 'firebase' || !firebaseAvailable || !isSignedIn) return;
+    _scheduledPushTimer?.cancel();
+    _scheduledPushTimer = Timer(delay, () {
+      unawaited(_flushScheduledPush());
+    });
+  }
+
+  Future<void> _flushScheduledPush() async {
+    if (_mode != 'firebase' || !firebaseAvailable || !isSignedIn) return;
+    if (_busy) {
+      schedulePush(delay: const Duration(milliseconds: 700));
+      return;
+    }
+    await syncNow(silent: true, pullRemote: false);
+  }
+
+  Future<void> handleAppResumed() async {
+    if (_mode != 'firebase' || !firebaseAvailable || !isSignedIn) return;
+    await startRealtime();
+    await syncNow(silent: true);
   }
 
   Future<void> _activateCurrentMode() async {
@@ -526,6 +553,7 @@ class SyncService extends ChangeNotifier {
   @override
   void dispose() {
     _periodicTimer?.cancel();
+    _scheduledPushTimer?.cancel();
     unawaited(_authSubscription?.cancel());
     for (final subscription in _subscriptions) {
       unawaited(subscription.cancel());

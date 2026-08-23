@@ -53,9 +53,9 @@ class SlamDoneV75ContractTest(unittest.TestCase):
         self.assertIn('width: widget.selected ? 16 : 12', northstar)
         self.assertIn('height: widget.selected ? 16 : 12', northstar)
 
-    def test_version_is_v75(self):
+    def test_version_is_v75_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version: 7\.5\.[0-9]+\+[0-9]+')
+        self.assertRegex(pubspec, r'version: 7\.(?:[6-9]|5\.[0-9]+)\.[0-9]+\+[0-9]+')
 
 
 if __name__ == '__main__':

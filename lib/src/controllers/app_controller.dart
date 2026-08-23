@@ -466,6 +466,7 @@ class AppController extends ChangeNotifier {
       _lastTimerCompletionToken = token;
       unawaited(refreshSessions());
       unawaited(refreshWorkItemsAndLayouts());
+      _scheduleCloudPush();
     }
 
     final workItemId = timerEngine.state.workItemId;
@@ -622,6 +623,8 @@ class AppController extends ChangeNotifier {
     return output;
   }
 
+  void _scheduleCloudPush() => syncService.schedulePush();
+
   Future<WorkItem> createWorkItem({
     required String title,
     required WorkItemType type,
@@ -633,6 +636,7 @@ class AppController extends ChangeNotifier {
       parentId: parentId,
     );
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
     return item;
   }
 
@@ -640,6 +644,7 @@ class AppController extends ChangeNotifier {
     final before = itemById(item.id) ?? item;
     await repository.updateWorkItem(item);
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
     _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
   }
 
@@ -650,6 +655,7 @@ class AppController extends ChangeNotifier {
     }
     await repository.setWorkItemCompleted(item, value);
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
     if (value) {
       _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
     }
@@ -670,6 +676,7 @@ class AppController extends ChangeNotifier {
       ),
     );
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
     final current = itemById(item.id);
     if (current != null && current.status != WorkStatus.completed) {
       _cancelPendingAutoArchive(item.id);
@@ -716,6 +723,7 @@ class AppController extends ChangeNotifier {
     );
     _autoArchiveSnapshots.remove(itemId);
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
   }
 
   Future<void> undoAutoArchive(String itemId) async {
@@ -735,6 +743,7 @@ class AppController extends ChangeNotifier {
     }
     message = 'Completion undone: ${current.title}';
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
   }
 
   void _cancelPendingAutoArchive(String itemId) {
@@ -755,11 +764,13 @@ class AppController extends ChangeNotifier {
     );
     message = 'Unarchived: ${item.title}';
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
   }
 
   Future<void> deleteWorkItem(WorkItem item) async {
     await repository.deleteWorkItem(item);
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
   }
 
   Future<void> applyDrop({
@@ -773,6 +784,7 @@ class AppController extends ChangeNotifier {
       intent: intent,
     );
     await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
   }
 
   CanvasLayout layoutFor(
@@ -802,11 +814,13 @@ class AppController extends ChangeNotifier {
       mindMapLayouts = {...mindMapLayouts, saved.itemId: saved};
     }
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<JournalEntry> getOrCreateJournal(String dateKey) async {
     final entry = await repository.getOrCreateJournal(dateKey);
     await refreshJournals();
+    _scheduleCloudPush();
     return entry;
   }
 
@@ -815,6 +829,7 @@ class AppController extends ChangeNotifier {
     journals = [saved, ...journals.where((value) => value.id != saved.id)]
       ..sort((a, b) => b.entryDate.compareTo(a.entryDate));
     notifyListeners();
+    _scheduleCloudPush();
     return saved;
   }
 
@@ -852,27 +867,32 @@ class AppController extends ChangeNotifier {
       textColorHex: textColorHex,
     );
     await refreshHabits();
+    _scheduleCloudPush();
     return habit;
   }
 
   Future<void> updateHabit(Habit habit) async {
     await repository.updateHabit(habit);
     await refreshHabits();
+    _scheduleCloudPush();
   }
 
   Future<void> deleteHabit(Habit habit) async {
     await repository.deleteHabit(habit);
     await refreshHabits();
+    _scheduleCloudPush();
   }
 
   Future<void> reorderHabits(List<Habit> ordered) async {
     await repository.reorderHabits(ordered);
     await refreshHabits();
+    _scheduleCloudPush();
   }
 
   Future<void> setHabitValue(Habit habit, String dateKey, double value) async {
     await repository.setHabitValue(habit, dateKey, value);
     await refreshHabits();
+    _scheduleCloudPush();
   }
 
   Future<NorthStarNote> createNorthStarNote({
@@ -881,17 +901,20 @@ class AppController extends ChangeNotifier {
   }) async {
     final note = await repository.createNorthStarNote(title: title, body: body);
     await refreshNorthStar();
+    _scheduleCloudPush();
     return note;
   }
 
   Future<void> updateNorthStarNote(NorthStarNote note) async {
     await repository.updateNorthStarNote(note);
     await refreshNorthStar();
+    _scheduleCloudPush();
   }
 
   Future<void> deleteNorthStarNote(NorthStarNote note) async {
     await repository.deleteNorthStarNote(note);
     await refreshNorthStar();
+    _scheduleCloudPush();
   }
 
   Future<RewardRank> createRewardRank({
@@ -907,75 +930,88 @@ class AppController extends ChangeNotifier {
       colorHex: colorHex,
     );
     await refreshRewards();
+    _scheduleCloudPush();
     return rank;
   }
 
   Future<void> updateRewardRank(RewardRank rank) async {
     await repository.updateRewardRank(rank);
     await refreshRewards();
+    _scheduleCloudPush();
   }
 
   Future<void> deleteRewardRank(RewardRank rank) async {
     await repository.deleteRewardRank(rank);
     await refreshRewards();
+    _scheduleCloudPush();
   }
 
   Future<StudyTable> createStudyTable(String title) async {
     final table = await repository.createStudyTable(title: title);
     await refreshStudyTables();
+    _scheduleCloudPush();
     return table;
   }
 
   Future<void> updateStudyTable(StudyTable table) async {
     await repository.updateStudyTable(table);
     await refreshStudyTables();
+    _scheduleCloudPush();
   }
 
   Future<void> deleteStudyTable(StudyTable table) async {
     await repository.deleteStudyTable(table);
     await refreshStudyTables();
+    _scheduleCloudPush();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     themeMode = mode;
     await database.setSetting('theme_mode', mode.name);
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> setAccentColor(int value) async {
     accentColorValue = value;
     await database.setSetting('accent_color', value.toString());
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> setBackgroundColor(int value) async {
     backgroundColorValue = value;
     await database.setSetting('background_color', value.toString());
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> setCardColor(int value) async {
     cardColorValue = value;
     await database.setSetting('card_color', value.toString());
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> setTextColor(int value) async {
     textColorValue = value;
     await database.setSetting('text_color', value.toString());
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> setFontScale(double value) async {
     fontScale = value.clamp(0.8, 1.6).toDouble();
     await database.setSetting('font_scale', fontScale.toString());
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> setFontFamily(String value) async {
     fontFamily = value;
     await database.setSetting('font_family', value);
     notifyListeners();
+    _scheduleCloudPush();
   }
 
   Future<void> resetAppearance() async {
@@ -1077,6 +1113,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> writeUiSetting(String key, String value) async {
     await database.setSetting(key, value);
+    _scheduleCloudPush();
   }
 
   Future<void> setMindMapTextColor(String itemId, String? hex) async {
