@@ -1,3 +1,13 @@
+# SlamDone V7.9.0 — Primary PC Reconciliation + Tasks Command Center
+
+- Fixed phone restore ordering so `work_items` reconcile parent-before-child and unresolved parent links are reported instead of causing SQLite foreign-key error 787.
+- Dependent card layouts and focus sessions now skip unresolved work-item foreign keys during repair instead of crashing the whole table pass.
+- Added explicit **Make this my Primary PC** authority. Primary-PC planner structure wins stale mobile structural conflicts while newer phone completion/checklist progress and new stable IDs remain additive.
+- Added Primary-PC and work-item repair diagnostics to Settings.
+- Rebuilt Tasks around compact independent visibility toggles for Active, Uncategorized, Completed, Archived plus smart OR filters for Urgent, Overdue, Due Today, This Week, and Undated.
+- Added **All active** and **Clear filters** shortcuts. Task filter preferences are local to each device and the phone uses a horizontally scrollable compact filter strip.
+- Preserved Quick Task capture and the existing full task editor.
+
 # SlamDone V7.8.0 — Verified Repair + Smooth Capture
 
 - Reworked **Verify & repair sync** into an isolated, deterministic repair pass that pauses realtime listeners, reconciles every planner table, re-reads Firestore after writes, and only reports Verified when actual local/cloud counts match.

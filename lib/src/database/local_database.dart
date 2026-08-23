@@ -5,6 +5,31 @@ import '../models/models.dart';
 import '../migration/migration_models.dart';
 import '../sync/conflict_resolver.dart';
 
+class WorkItemMergeReport {
+  const WorkItemMergeReport({
+    required this.inserted,
+    required this.updated,
+    required this.skipped,
+    required this.deferred,
+    required this.orphanIds,
+    required this.authoritativeUploadIds,
+  });
+
+  final int inserted;
+  final int updated;
+  final int skipped;
+  final int deferred;
+  final List<String> orphanIds;
+  final Set<String> authoritativeUploadIds;
+}
+
+class _WorkItemMergeDecision {
+  const _WorkItemMergeDecision(this.row, {this.authoritativeUpload = false});
+
+  final Map<String, Object?> row;
+  final bool authoritativeUpload;
+}
+
 class LocalDatabase {
   Database? _database;
   late final String databasePath;
@@ -925,10 +950,216 @@ class LocalDatabase {
     }
   }
 
+  static const Set<String> _primaryStructuralTables = {
+    'canvas_layouts',
+    'northstar_notes',
+  };
+
+  static const List<String> _workItemProgressFields = [
+    'status',
+    'gtd_status',
+    'checklist_done',
+  ];
+
+  Map<String, Object?> _mergeProgressFields(
+    Map<String, Object?> structural,
+    Map<String, Object?> progressSource,
+  ) {
+    final merged = Map<String, Object?>.from(structural);
+    for (final key in _workItemProgressFields) {
+      if (progressSource.containsKey(key)) merged[key] = progressSource[key];
+    }
+    for (final key in ['client_updated_at', 'revision']) {
+      if (progressSource.containsKey(key)) merged[key] = progressSource[key];
+    }
+    // Structural authority stays attributed to the Primary PC. A later phone
+    // progress edit will receive the phone device id again through the normal
+    // repository update path, without letting stale mobile structure win.
+    merged['device_id'] = structural['device_id'];
+    return merged;
+  }
+
+  _WorkItemMergeDecision _mergeWorkItemWithPrimaryAuthority(
+    Map<String, Object?> incoming,
+    Map<String, Object?> existing, {
+    required String primaryDeviceId,
+  }) {
+    if (primaryDeviceId.isEmpty) {
+      return _WorkItemMergeDecision(
+        incomingRecordIsNewer(incoming, existing) ? incoming : existing,
+      );
+    }
+
+    final incomingPrimary = incoming['device_id']?.toString() == primaryDeviceId;
+    final existingPrimary = existing['device_id']?.toString() == primaryDeviceId;
+    final incomingNewer = incomingRecordIsNewer(incoming, existing);
+    final existingNewer = incomingRecordIsNewer(existing, incoming);
+
+    if (existingPrimary && !incomingPrimary) {
+      final corrected = incomingNewer
+          ? _mergeProgressFields(existing, incoming)
+          : Map<String, Object?>.from(existing);
+      return _WorkItemMergeDecision(corrected, authoritativeUpload: true);
+    }
+
+    if (incomingPrimary && !existingPrimary) {
+      final corrected = existingNewer
+          ? _mergeProgressFields(incoming, existing)
+          : Map<String, Object?>.from(incoming);
+      return _WorkItemMergeDecision(
+        corrected,
+        authoritativeUpload: existingNewer,
+      );
+    }
+
+    return _WorkItemMergeDecision(incomingNewer ? incoming : existing);
+  }
+
+  bool _mapsEquivalent(Map<String, Object?> a, Map<String, Object?> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key) || b[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
+  Future<bool> _remoteForeignKeysExist(
+    DatabaseExecutor transaction,
+    String entityType,
+    Map<String, Object?> row,
+  ) async {
+    String? workItemId;
+    if (entityType == 'canvas_layouts') {
+      workItemId = row['item_id']?.toString();
+    } else if (entityType == 'time_sessions') {
+      workItemId = row['work_item_id']?.toString();
+    }
+    if (workItemId == null || workItemId.isEmpty) return true;
+    final parent = await transaction.query(
+      'work_items',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [workItemId],
+      limit: 1,
+    );
+    return parent.isNotEmpty;
+  }
+
+  Future<int> claimPrimaryStructuralAuthority(String deviceId) async {
+    if (deviceId.isEmpty) return 0;
+    var changed = 0;
+    final tables = ['work_items', 'canvas_layouts', 'northstar_notes'];
+    for (final table in tables) {
+      final rows = await db.query(table, columns: ['id', 'device_id']);
+      for (final row in rows) {
+        final id = row['id']?.toString() ?? '';
+        if (id.isEmpty || row['device_id']?.toString() == deviceId) continue;
+        await db.update(
+          table,
+          {'device_id': deviceId},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        await enqueueEntity(table, id);
+        changed++;
+      }
+    }
+    return changed;
+  }
+
+  Future<WorkItemMergeReport> mergeRemoteWorkItemsParentFirst(
+    List<Map<String, dynamic>> rows, {
+    required String primaryDeviceId,
+  }) async {
+    var inserted = 0;
+    var updated = 0;
+    var skipped = 0;
+    var deferred = 0;
+    final orphanIds = <String>[];
+    final authoritativeUploadIds = <String>{};
+
+    await db.transaction((transaction) async {
+      final current = await transaction.query('work_items');
+      final knownIds = current
+          .map((row) => row['id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      var pending = rows
+          .map((raw) {
+            final row = Map<String, Object?>.from(raw)..remove('owner_id');
+            _convertCloudBoolsToLocal('work_items', row);
+            return row;
+          })
+          .where((row) => row['id']?.toString().isNotEmpty == true)
+          .toList(growable: true);
+
+      while (pending.isNotEmpty) {
+        final nextPending = <Map<String, Object?>>[];
+        var madeProgress = false;
+        for (final row in pending) {
+          final id = row['id']!.toString();
+          final parentId = row['parent_id']?.toString() ?? '';
+          if (parentId.isNotEmpty && !knownIds.contains(parentId)) {
+            nextPending.add(row);
+            deferred++;
+            continue;
+          }
+
+          final existingRows = await transaction.query(
+            'work_items',
+            where: 'id = ?',
+            whereArgs: [id],
+            limit: 1,
+          );
+          if (existingRows.isEmpty) {
+            await _upsertRow(transaction, 'work_items', row);
+            inserted++;
+          } else {
+            final existing = Map<String, Object?>.from(existingRows.first);
+            final decision = _mergeWorkItemWithPrimaryAuthority(
+              row,
+              existing,
+              primaryDeviceId: primaryDeviceId,
+            );
+            if (decision.authoritativeUpload) {
+              authoritativeUploadIds.add(id);
+            }
+            if (_mapsEquivalent(existing, decision.row)) {
+              skipped++;
+            } else {
+              await _upsertRow(transaction, 'work_items', decision.row);
+              updated++;
+            }
+          }
+          knownIds.add(id);
+          madeProgress = true;
+        }
+
+        if (!madeProgress) {
+          orphanIds.addAll(
+            nextPending.map((row) => row['id']!.toString()),
+          );
+          break;
+        }
+        pending = nextPending;
+      }
+    });
+
+    return WorkItemMergeReport(
+      inserted: inserted,
+      updated: updated,
+      skipped: skipped,
+      deferred: deferred,
+      orphanIds: List.unmodifiable(orphanIds),
+      authoritativeUploadIds: Set.unmodifiable(authoritativeUploadIds),
+    );
+  }
+
   Future<void> mergeRemoteRows(
     String entityType,
     List<Map<String, dynamic>> rows, {
     bool Function(String entityId)? shouldDefer,
+    String primaryDeviceId = '',
   }) async {
     await db.transaction((transaction) async {
       for (final raw in rows) {
@@ -946,16 +1177,36 @@ class LocalDatabase {
           continue;
         }
 
+        if (!await _remoteForeignKeysExist(transaction, entityType, row)) {
+          continue;
+        }
+
         final existingRows = await transaction.query(
           entityType,
           where: 'id = ?',
           whereArgs: [id],
           limit: 1,
         );
-        if (existingRows.isNotEmpty &&
-            !incomingRecordIsNewer(row, existingRows.first)) {
-          continue;
+        var accept = existingRows.isEmpty;
+        if (!accept) {
+          final existing = existingRows.first;
+          if (primaryDeviceId.isNotEmpty &&
+              _primaryStructuralTables.contains(entityType)) {
+            final incomingPrimary =
+                row['device_id']?.toString() == primaryDeviceId;
+            final existingPrimary =
+                existing['device_id']?.toString() == primaryDeviceId;
+            if (existingPrimary && !incomingPrimary) {
+              continue;
+            }
+            accept = incomingPrimary && !existingPrimary
+                ? true
+                : incomingRecordIsNewer(row, existing);
+          } else {
+            accept = incomingRecordIsNewer(row, existing);
+          }
         }
+        if (!accept) continue;
         _convertCloudBoolsToLocal(entityType, row);
         await _upsertRow(transaction, entityType, row);
       }

@@ -35,6 +35,9 @@ class SyncService extends ChangeNotifier {
   Map<String, int> _cloudAuditCounts = const {};
   Map<String, String> _auditErrors = const {};
   String _verificationStep = '';
+  String _localDeviceId = '';
+  String _primaryDeviceId = '';
+  String _workItemDiagnostics = '';
 
   static const List<String> cloudTables = [
     'work_items',
@@ -66,6 +69,11 @@ class SyncService extends ChangeNotifier {
   DateTime? get lastSyncedAt => _lastSyncedAt;
   String get mode => _mode;
   bool get verified => _verified;
+  String get primaryDeviceId => _primaryDeviceId;
+  String get localDeviceId => _localDeviceId;
+  bool get isPrimaryDevice =>
+      _primaryDeviceId.isNotEmpty && _primaryDeviceId == _localDeviceId;
+  String get workItemDiagnostics => _workItemDiagnostics;
   Map<String, int> get localAuditCounts => Map.unmodifiable(_localAuditCounts);
   Map<String, int> get cloudAuditCounts => Map.unmodifiable(_cloudAuditCounts);
   Map<String, String> get auditErrors => Map.unmodifiable(_auditErrors);
@@ -116,6 +124,7 @@ class SyncService extends ChangeNotifier {
   bool get isSignedIn => currentUser != null;
 
   Future<void> initialize() async {
+    await _refreshDeviceIdentity();
     _mode = await database.getSetting('sync_mode') ?? 'local';
     if (_mode == 'folder' || _mode == 'supabase') {
       _mode = 'local';
@@ -216,6 +225,28 @@ class SyncService extends ChangeNotifier {
       _status = 'Browser local — automatic saving is active';
     }
     notifyListeners();
+  }
+
+  Future<void> _refreshDeviceIdentity() async {
+    _localDeviceId = await database.getSetting('device_id') ?? '';
+    _primaryDeviceId = await database.getSetting('primary_device_id') ?? '';
+  }
+
+  Future<void> makeThisPrimaryDevice() async {
+    await _refreshDeviceIdentity();
+    if (_localDeviceId.isEmpty) {
+      throw StateError('This browser does not have a stable device id yet.');
+    }
+    await database.claimPrimaryStructuralAuthority(_localDeviceId);
+    await database.setSetting('primary_device_id', _localDeviceId);
+    _primaryDeviceId = _localDeviceId;
+    _verified = false;
+    _status = 'Primary PC saved — reconciling planner structure…';
+    notifyListeners();
+    if (_mode == 'firebase' && firebaseAvailable && isSignedIn) {
+      await _pushSetting(currentUser!, 'primary_device_id');
+      await verifyAndRepair();
+    }
   }
 
   Future<void> useLocalOnly() async {
@@ -328,8 +359,11 @@ class SyncService extends ChangeNotifier {
     }
     try {
       if (pullRemote) {
-        await _reconcileAllEntities(user);
+        // Settings contains the Primary-PC device designation. Load it before
+        // planner entities so structural conflict policy is correct even on a
+        // stale phone during the very first repair pass.
         await _reconcileSettings(user);
+        await _reconcileAllEntities(user);
         await _reconcileTimerState(user);
       }
       await _pushQueueToFirestore(user);
@@ -442,7 +476,29 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  bool _localShouldUpload(
+    String entityType,
+    Map<String, Object?> localRow,
+    Map<String, Object?>? remoteRow,
+  ) {
+    if (remoteRow == null) return true;
+    if (_primaryDeviceId.isNotEmpty &&
+        const {'work_items', 'canvas_layouts', 'northstar_notes'}
+            .contains(entityType)) {
+      final localPrimary =
+          localRow['device_id']?.toString() == _primaryDeviceId;
+      final remotePrimary =
+          remoteRow['device_id']?.toString() == _primaryDeviceId;
+      if (localPrimary && !remotePrimary) return true;
+      if (!localPrimary && remotePrimary && entityType != 'work_items') {
+        return false;
+      }
+    }
+    return incomingRecordIsNewer(localRow, remoteRow);
+  }
+
   Future<void> _reconcileAllEntities(User user) async {
+    await _refreshDeviceIdentity();
     final root = _userRoot(user);
     final localCounts = <String, int>{};
     final cloudCounts = <String, int>{};
@@ -464,12 +520,29 @@ class SyncService extends ChangeNotifier {
                   Map<String, Object?>.from(raw)..remove('owner_id'),
         };
 
-        await database.mergeRemoteRows(
-          entityType,
-          remoteRows,
-          shouldDefer:
-              entityType == 'journal_entries' ? isJournalEditing : null,
-        );
+        final forcedUploadIds = <String>{};
+        if (entityType == 'work_items') {
+          final report = await database.mergeRemoteWorkItemsParentFirst(
+            remoteRows,
+            primaryDeviceId: _primaryDeviceId,
+          );
+          forcedUploadIds.addAll(report.authoritativeUploadIds);
+          _workItemDiagnostics =
+              'Work items • inserted ${report.inserted} • updated ${report.updated} • '
+              'skipped ${report.skipped} • deferred ${report.deferred}';
+          if (report.orphanIds.isNotEmpty) {
+            errors['work_items'] =
+                'Unresolved parent links: ${report.orphanIds.join(', ')}';
+          }
+        } else {
+          await database.mergeRemoteRows(
+            entityType,
+            remoteRows,
+            shouldDefer:
+                entityType == 'journal_entries' ? isJournalEditing : null,
+            primaryDeviceId: _primaryDeviceId,
+          );
+        }
 
         final localRows = await database.loadRowsForSync(entityType);
         final uploadIds = <String>[];
@@ -478,15 +551,13 @@ class SyncService extends ChangeNotifier {
           if (id.isEmpty) continue;
           final localRow = Map<String, Object?>.from(rawLocal);
           final remoteRow = remoteById[id];
-          if (remoteRow == null || incomingRecordIsNewer(localRow, remoteRow)) {
+          if (forcedUploadIds.contains(id) ||
+              _localShouldUpload(entityType, localRow, remoteRow)) {
             uploadIds.add(id);
           }
         }
         await _pushEntityIds(user, root, entityType, uploadIds);
 
-        // Re-read Firestore after the repair writes. This is deliberately a
-        // real cloud count, not a synthetic union, so "Verified" proves that
-        // this browser can actually see the same records that exist locally.
         final verifySnapshot = await root.collection(entityType).get();
         if (entityType != 'northstar_notes') {
           final verifyRows = await _rowsFromSnapshot(
@@ -494,12 +565,27 @@ class SyncService extends ChangeNotifier {
             entityType,
             verifySnapshot,
           );
-          await database.mergeRemoteRows(
-            entityType,
-            verifyRows,
-            shouldDefer:
-                entityType == 'journal_entries' ? isJournalEditing : null,
-          );
+          if (entityType == 'work_items') {
+            final verifyReport = await database.mergeRemoteWorkItemsParentFirst(
+              verifyRows,
+              primaryDeviceId: _primaryDeviceId,
+            );
+            if (verifyReport.orphanIds.isNotEmpty) {
+              errors['work_items'] =
+                  'Unresolved parent links: ${verifyReport.orphanIds.join(', ')}';
+            } else if (errors['work_items']?.startsWith('Unresolved parent') ==
+                true) {
+              errors.remove('work_items');
+            }
+          } else {
+            await database.mergeRemoteRows(
+              entityType,
+              verifyRows,
+              shouldDefer:
+                  entityType == 'journal_entries' ? isJournalEditing : null,
+              primaryDeviceId: _primaryDeviceId,
+            );
+          }
         }
         final finalLocalRows = await database.loadRowsForSync(entityType);
         localCounts[entityType] = finalLocalRows
@@ -508,7 +594,9 @@ class SyncService extends ChangeNotifier {
             .toSet()
             .length;
         cloudCounts[entityType] = verifySnapshot.docs.length;
-        errors.remove(entityType);
+        if (entityType != 'work_items' || !errors.containsKey('work_items')) {
+          errors.remove(entityType);
+        }
         if (const {
           'work_items',
           'journal_entries',
@@ -610,6 +698,7 @@ class SyncService extends ChangeNotifier {
         ..._cloudAuditCounts,
         'app_settings': finalCloudKeys.length,
       };
+      await _refreshDeviceIdentity();
       errors.remove('app_settings');
     } catch (error) {
       errors['app_settings'] = _shortError(error);
@@ -711,15 +800,25 @@ class SyncService extends ChangeNotifier {
   }
 
   Future<void> _pullAllFromFirestore(User user) async {
+    await _refreshDeviceIdentity();
     final root = FirebaseFirestore.instance.collection('users').doc(user.uid);
     for (final entityType in cloudTables) {
       final snapshot = await root.collection(entityType).get();
       final rows = await _rowsFromSnapshot(user, entityType, snapshot);
-      await database.mergeRemoteRows(
-        entityType,
-        rows,
-        shouldDefer: entityType == 'journal_entries' ? isJournalEditing : null,
-      );
+      if (entityType == 'work_items') {
+        await database.mergeRemoteWorkItemsParentFirst(
+          rows,
+          primaryDeviceId: _primaryDeviceId,
+        );
+      } else {
+        await database.mergeRemoteRows(
+          entityType,
+          rows,
+          shouldDefer:
+              entityType == 'journal_entries' ? isJournalEditing : null,
+          primaryDeviceId: _primaryDeviceId,
+        );
+      }
     }
   }
 
@@ -906,6 +1005,7 @@ class SyncService extends ChangeNotifier {
     if (_mode != 'firebase') return;
     final user = currentUser;
     if (user == null) return;
+    await _refreshDeviceIdentity();
     final root = _userRoot(user);
     if (!_verified && _auditErrors.isEmpty) {
       _status = 'Realtime connected — verifying planner data…';
@@ -917,12 +1017,20 @@ class SyncService extends ChangeNotifier {
         (snapshot) async {
           try {
             final rows = await _rowsFromSnapshot(user, entityType, snapshot);
-            await database.mergeRemoteRows(
-              entityType,
-              rows,
-              shouldDefer:
-                  entityType == 'journal_entries' ? isJournalEditing : null,
-            );
+            if (entityType == 'work_items') {
+              await database.mergeRemoteWorkItemsParentFirst(
+                rows,
+                primaryDeviceId: _primaryDeviceId,
+              );
+            } else {
+              await database.mergeRemoteRows(
+                entityType,
+                rows,
+                shouldDefer:
+                    entityType == 'journal_entries' ? isJournalEditing : null,
+                primaryDeviceId: _primaryDeviceId,
+              );
+            }
             await onRemoteChanged();
             _lastSyncedAt = DateTime.now();
             if (_localAuditCounts.containsKey(entityType)) {

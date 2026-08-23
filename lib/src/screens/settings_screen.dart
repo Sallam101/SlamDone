@@ -411,6 +411,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             if (sync.isSignedIn && sync.currentUser?.email != null)
               Text('Signed in as ${sync.currentUser!.email}'),
+            if (sync.isSignedIn) ...[
+              const SizedBox(height: 6),
+              Text(
+                sync.isPrimaryDevice
+                    ? 'Primary PC: this device is authoritative for planner structure.'
+                    : sync.primaryDeviceId.isEmpty
+                        ? 'Primary PC: not designated yet.'
+                        : 'Primary PC: another device is authoritative for planner structure.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (sync.workItemDiagnostics.isNotEmpty)
+                Text(
+                  sync.workItemDiagnostics,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              if (!sync.isPrimaryDevice && !mobile)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: OutlinedButton.icon(
+                    onPressed: sync.isBusy ? null : sync.makeThisPrimaryDevice,
+                    icon: const Icon(Icons.computer_outlined),
+                    label: const Text('Make this my Primary PC'),
+                  ),
+                ),
+            ],
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,

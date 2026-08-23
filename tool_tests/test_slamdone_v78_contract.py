@@ -8,9 +8,9 @@ class SlamDoneV78ContractTest(unittest.TestCase):
     def read(self, rel):
         return (ROOT / rel).read_text(encoding='utf-8')
 
-    def test_version_is_780(self):
+    def test_version_is_780_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertIn('version: 7.8.0+180', pubspec)
+        self.assertRegex(pubspec, r'version: 7\.(?:8|9)\.\d+\+\d+')
 
     def test_manual_sync_repair_is_isolated_and_reports_real_table_failures(self):
         src = self.read('lib/src/services/sync_service.dart')

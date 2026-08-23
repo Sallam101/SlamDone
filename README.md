@@ -81,3 +81,9 @@ For a currently incomplete cloud, open SlamDone on the PC that has the full plan
 
 ### Export back to Autivra4
 **Settings → Export for Autivra4** first reconciles SlamDone, then downloads a native Autivra4 V6-shaped JSON with the nine native entity tables and compatible settings while excluding device/Drive/Firebase transport identity. The recovered Autivra4 V6.4.1 importer adds missing IDs but skips existing entity IDs, so use this file as a fresh/full restore or missing-record import unless the native importer is upgraded to merge newer existing IDs.
+
+## V7.9 Primary PC reconciliation and Tasks command center
+
+Designate the computer that contains the curated planner as **Settings → Make this my Primary PC**. During full repair SlamDone restores work items parent-first, then dependent layouts and focus sessions. The Primary PC is authoritative for structural planner fields while phone-created task IDs and newer completion/checklist progress remain additive and deduplicated by stable IDs.
+
+Tasks now includes compact toggles for **Active, Uncategorized, Completed, Archived, Urgent, Overdue, Due Today, This Week, and Undated**. Smart date/priority filters combine with OR semantics; search and hierarchy restrictions continue narrowing results. Filter preferences stay local to each device so the phone can keep a compact daily setup without changing the PC toolbar.

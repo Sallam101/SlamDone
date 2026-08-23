@@ -1132,6 +1132,10 @@ class AppController extends ChangeNotifier {
     _scheduleCloudPush();
   }
 
+  Future<void> writeLocalUiSetting(String key, String value) async {
+    await database.setSetting(key, value, enqueue: false);
+  }
+
   Future<void> setMindMapTextColor(String itemId, String? hex) async {
     final next = Map<String, String>.from(mindMapTextColors);
     if (hex == null || hex.isEmpty) {
