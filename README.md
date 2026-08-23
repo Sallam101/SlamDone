@@ -97,3 +97,11 @@ On supported desktop Chrome/Edge, pressing **Pin** moves the existing SlamDone f
 
 The timer now uses the bundled **soft_chime.wav** for completion instead of the unreliable Flutter web system alert. A small opacity button reveals a temporary 25–100% transparency slider, then hides it again when not needed. The in-app timer keeps the same title, analog/digital clock, Start/Pause/Resume, Reset, Stop & log, Stopwatch, resize, and color behavior. Unsupported browsers and mobile fall back to the existing in-app pin. Closing the entire SlamDone PWA may close the browser-owned PiP window; the always-on-top guarantee applies while SlamDone remains running/minimized.
 
+
+## V7.12 Windows transparent pinned timer
+
+SlamDone can use an optional Windows Timer Companion for the pinned desktop timer. Unlike browser Picture-in-Picture, the companion is a borderless TopMost Windows window, so it has one SlamDone control bar and supports true 20–100% window transparency. The companion also includes 16 full timer themes, including light backgrounds such as White, Soft gray, Cream, Mint, Ice blue, Lavender, Blush, and Pale yellow.
+
+After a successful GitHub Actions deployment, download `downloads/SlamDoneTimerCompanion.zip` from the SlamDone Pages site, extract it, and run `Install-SlamDoneTimer.cmd`. Installation is per-user under `%LOCALAPPDATA%` and does not require administrator access. The first browser connection may request permission to communicate with the loopback companion.
+
+The native companion receives timer-only state through `127.0.0.1:37110`; it does not receive goals, journal entries, habits, Firebase credentials, or other planner data. If the companion is not available, Chromium Document Picture-in-Picture remains the fallback.

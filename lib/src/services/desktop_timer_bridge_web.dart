@@ -6,6 +6,9 @@ external bool _desktopTimerSupported();
 @JS('slamDoneDesktopTimerIsOpen')
 external bool _desktopTimerIsOpen();
 
+@JS('slamDoneDesktopTimerPrepare')
+external void _desktopTimerPrepare();
+
 @JS('slamDoneDesktopTimerOpen')
 external JSPromise<JSBoolean> _desktopTimerOpen(String snapshotJson);
 
@@ -50,6 +53,12 @@ class DesktopTimerBridge {
     } catch (_) {
       return false;
     }
+  }
+
+  void prepare() {
+    try {
+      _desktopTimerPrepare();
+    } catch (_) {}
   }
 
   Future<bool> open(String snapshotJson) async {

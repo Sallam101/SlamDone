@@ -1,3 +1,12 @@
+# SlamDone V7.12.0
+
+- Added the optional Windows Timer Companion: a borderless, always-on-top native timer with true Windows opacity so apps behind the timer remain visible.
+- Consolidated the native timer to one sleek SlamDone header: task title, transparency, theme/background, pin/unpin, and close. Browser PiP fallback no longer duplicates its own close button underneath Chromium's title bar.
+- Expanded timer styling from eight accent-only colors to sixteen full themes with background + accent + automatic foreground contrast, including White, Soft gray, Cream, Mint, Ice blue, Lavender, Blush, and Pale yellow.
+- Added a hidden-until-needed 20–100% transparency slider to the native timer. The whole native window becomes genuinely translucent; browser PiP fading remains only a fallback.
+- Added a loopback-only (`127.0.0.1:37110`) timer bridge. It exchanges timer state/actions only and has no Firestore/planner access.
+- The existing GitHub Pages workflow now also builds a self-contained Windows companion ZIP and publishes it under the Pages `downloads` directory.
+
 # SlamDone V7.11.0 — Desktop-Pinned Focus Timer
 
 - Desktop Pin now uses Chromium Document Picture-in-Picture on supported Chrome/Edge desktop so the timer stays always-on-top when the main SlamDone PWA/window is minimized.

@@ -10,6 +10,8 @@ class DesktopTimerBridge {
   bool get supported => false;
   bool get isOpen => false;
 
+  void prepare() {}
+
   Future<bool> open(String snapshotJson) async => false;
   void update(String snapshotJson) {}
   void close() {}

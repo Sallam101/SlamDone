@@ -9,9 +9,9 @@ class SlamDoneV711ContractTest(unittest.TestCase):
     def read(self, rel: str) -> str:
         return (ROOT / rel).read_text(encoding='utf-8')
 
-    def test_release_version_is_7110(self):
+    def test_release_version_is_711_or_newer(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.11\.0\+210\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.(?:1[1-9]|[2-9]\d)\.\d+\+\d+\s*$')
 
     def test_brand_web_injects_document_pip_bridge_and_real_chime(self):
         source = self.read('tools/brand_web.py')
@@ -26,7 +26,7 @@ class SlamDoneV711ContractTest(unittest.TestCase):
         ):
             self.assertIn(marker, source)
         self.assertIn('opacity', source)
-        self.assertRegex(source, r'0\.25|\.25')
+        self.assertRegex(source, r'0\.(?:20|25)|\.(?:20|25)')
 
     def test_conditional_desktop_timer_bridge_is_web_only(self):
         common = self.read('lib/src/services/desktop_timer_bridge.dart')
@@ -82,7 +82,7 @@ class SlamDoneV711ContractTest(unittest.TestCase):
             '_showOpacity',
             'Icons.opacity',
             'Slider(',
-            'min: .25',
+            'min: .20',
             'max: 1',
             'AnimatedOpacity',
         ):

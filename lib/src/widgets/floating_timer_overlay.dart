@@ -11,6 +11,20 @@ import 'slamdone_brand.dart';
 enum _TimerDensity { mini, compact, regular, spacious }
 enum _TimerResizeAxis { horizontal, vertical, both }
 
+class _TimerThemeChoice {
+  const _TimerThemeChoice({
+    required this.name,
+    required this.accent,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String name;
+  final Color accent;
+  final Color background;
+  final Color foreground;
+}
+
 class SlamDoneFloatingTimerOverlay extends StatefulWidget {
   const SlamDoneFloatingTimerOverlay({
     super.key,
@@ -50,15 +64,23 @@ class _SlamDoneFloatingTimerOverlayState
     extends State<SlamDoneFloatingTimerOverlay> {
   bool _showOpacity = false;
 
-  static const _timerColors = <Color>[
-    SlamDoneBrand.brandGreen,
-    Color(0xFF2457D6),
-    Color(0xFF00897B),
-    Color(0xFF7B1FA2),
-    Color(0xFFC62828),
-    Color(0xFFEF6C00),
-    Color(0xFF455A64),
-    Color(0xFFAD1457),
+  static const _timerThemes = <_TimerThemeChoice>[
+    _TimerThemeChoice(name: 'SlamDone', accent: SlamDoneBrand.brandGreen, background: Color(0xFF10150F), foreground: Color(0xFFF7FAF5)),
+    _TimerThemeChoice(name: 'Royal blue', accent: Color(0xFF4C7DFF), background: Color(0xFF0E1830), foreground: Color(0xFFF7F9FF)),
+    _TimerThemeChoice(name: 'Teal', accent: Color(0xFF25B8A8), background: Color(0xFF07201D), foreground: Color(0xFFF3FFFC)),
+    _TimerThemeChoice(name: 'Violet', accent: Color(0xFFB968E0), background: Color(0xFF211028), foreground: Color(0xFFFFF7FF)),
+    _TimerThemeChoice(name: 'Crimson', accent: Color(0xFFE05252), background: Color(0xFF2A0D0D), foreground: Color(0xFFFFF7F7)),
+    _TimerThemeChoice(name: 'Amber', accent: Color(0xFFFF9D3A), background: Color(0xFF2A1705), foreground: Color(0xFFFFFAF2)),
+    _TimerThemeChoice(name: 'Slate', accent: Color(0xFF78909C), background: Color(0xFF10181C), foreground: Color(0xFFF6FAFC)),
+    _TimerThemeChoice(name: 'Berry', accent: Color(0xFFE2558C), background: Color(0xFF2A0B19), foreground: Color(0xFFFFF6FA)),
+    _TimerThemeChoice(name: 'White', accent: Color(0xFF65B52B), background: Color(0xFFFFFFFF), foreground: Color(0xFF111827)),
+    _TimerThemeChoice(name: 'Soft gray', accent: Color(0xFF2457D6), background: Color(0xFFF2F4F7), foreground: Color(0xFF111827)),
+    _TimerThemeChoice(name: 'Cream', accent: Color(0xFFD97706), background: Color(0xFFFFF4DF), foreground: Color(0xFF3B2A12)),
+    _TimerThemeChoice(name: 'Mint', accent: Color(0xFF238B45), background: Color(0xFFE9FBEF), foreground: Color(0xFF16351F)),
+    _TimerThemeChoice(name: 'Ice blue', accent: Color(0xFF2C6ECF), background: Color(0xFFEAF5FF), foreground: Color(0xFF132B45)),
+    _TimerThemeChoice(name: 'Lavender', accent: Color(0xFF7B45B8), background: Color(0xFFF3ECFF), foreground: Color(0xFF2F2140)),
+    _TimerThemeChoice(name: 'Blush', accent: Color(0xFFC13A6B), background: Color(0xFFFFF0F4), foreground: Color(0xFF462331)),
+    _TimerThemeChoice(name: 'Pale yellow', accent: Color(0xFFB7791F), background: Color(0xFFFFF9D9), foreground: Color(0xFF3D3211)),
   ];
 
   _TimerDensity get _density {
@@ -73,19 +95,35 @@ class _SlamDoneFloatingTimerOverlayState
   @override
   Widget build(BuildContext context) {
     final engine = widget.controller.timerEngine;
-    final safeColorIndex = widget.colorIndex.clamp(0, _timerColors.length - 1).toInt();
-    final accent = _timerColors[safeColorIndex];
+    final safeColorIndex = widget.colorIndex.clamp(0, _timerThemes.length - 1).toInt();
+    final timerTheme = _timerThemes[safeColorIndex];
+    final accent = timerTheme.accent;
+    final baseTheme = Theme.of(context);
+    final timerThemeData = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(
+        surface: timerTheme.background,
+        onSurface: timerTheme.foreground,
+        primary: accent,
+      ),
+      textTheme: baseTheme.textTheme.apply(
+        bodyColor: timerTheme.foreground,
+        displayColor: timerTheme.foreground,
+      ),
+      iconTheme: baseTheme.iconTheme.copyWith(color: timerTheme.foreground),
+    );
     final density = _density;
     final radius = density == _TimerDensity.mini ? 10.0 : 16.0;
 
-    return AnimatedOpacity(
-      opacity: widget.opacity.clamp(.25, 1).toDouble(),
+    return Theme(
+      data: timerThemeData,
+      child: AnimatedOpacity(
+      opacity: widget.opacity.clamp(.20, 1).toDouble(),
       duration: const Duration(milliseconds: 120),
       child: Material(
       elevation: 18,
       borderRadius: BorderRadius.circular(radius),
       clipBehavior: Clip.antiAlias,
-      color: Theme.of(context).colorScheme.surface,
+      color: timerTheme.background,
       child: SizedBox(
         width: widget.size.width,
         height: widget.size.height,
@@ -110,7 +148,7 @@ class _SlamDoneFloatingTimerOverlayState
                 child: Material(
                   elevation: 8,
                   borderRadius: BorderRadius.circular(10),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: .96),
+                  color: timerTheme.background.withValues(alpha: .96),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     child: Row(
@@ -118,16 +156,16 @@ class _SlamDoneFloatingTimerOverlayState
                         Icon(Icons.opacity, size: 15, color: accent),
                         Expanded(
                           child: Slider(
-                            min: .25,
+                            min: .20,
                             max: 1,
                             divisions: 15,
-                            value: widget.opacity.clamp(.25, 1).toDouble(),
+                            value: widget.opacity.clamp(.20, 1).toDouble(),
                             onChanged: widget.onOpacityChanged,
                           ),
                         ),
                         Text(
-                          '${(widget.opacity.clamp(.25, 1) * 100).round()}%',
-                          style: Theme.of(context).textTheme.labelSmall,
+                          '${(widget.opacity.clamp(.20, 1) * 100).round()}%',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: timerTheme.foreground),
                         ),
                       ],
                     ),
@@ -171,6 +209,7 @@ class _SlamDoneFloatingTimerOverlayState
         ),
       ),
     ),
+    );
     );
   }
 
@@ -322,7 +361,7 @@ class _SlamDoneFloatingTimerOverlayState
                   icon: const Icon(Icons.palette_outlined),
                   onSelected: widget.onColorChanged,
                   itemBuilder: (context) => List.generate(
-                    _timerColors.length,
+                    _timerThemes.length,
                     (index) => PopupMenuItem<int>(
                       value: index,
                       child: Row(
@@ -331,12 +370,13 @@ class _SlamDoneFloatingTimerOverlayState
                             width: 18,
                             height: 18,
                             decoration: BoxDecoration(
-                              color: _timerColors[index],
+                              color: _timerThemes[index].background,
+                              border: Border.all(color: _timerThemes[index].accent, width: 2),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(index == 0 ? 'SlamDone green' : 'Color ${index + 1}'),
+                          Text(_timerThemes[index].name),
                         ],
                       ),
                     ),

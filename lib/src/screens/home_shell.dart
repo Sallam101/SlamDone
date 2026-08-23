@@ -43,6 +43,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   Size _floatingTimerSize = const Size(218, 214);
   bool _floatingTimerPinned = true;
   bool _desktopTimerOpen = false;
+  bool _desktopTimerPrepared = false;
   double _floatingTimerOpacity = 1.0;
   int _floatingTimerColorIndex = 0;
   AppSection? _floatingTimerUnpinnedSection;
@@ -82,6 +83,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _desktopTimerBridge?.prepare();
       final controller = _lifecycleController;
       if (controller != null) {
         unawaited(controller.syncService.handleAppResumed());
@@ -103,6 +105,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     _showAutoArchiveNoticeIfNeeded(controller);
+    if (controller.floatingTimerVisible && !_desktopTimerPrepared) {
+      _desktopTimerPrepared = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _desktopTimerBridge?.prepare();
+      });
+    }
     final tabs = controller.tabPreferences.isEmpty
         ? AppController.defaultTabPreferences()
         : controller.tabPreferences;
@@ -351,12 +359,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                           colorIndex: _floatingTimerColorIndex,
                           onOpacityChanged: (value) {
                             setState(() {
-                              _floatingTimerOpacity = value.clamp(.25, 1).toDouble();
+                              _floatingTimerOpacity = value.clamp(.20, 1).toDouble();
                             });
                             _pushDesktopTimerSnapshot();
                           },
                           onColorChanged: (value) {
-                            setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
+                            setState(() => _floatingTimerColorIndex = value.clamp(0, 15).toInt());
                             _pushDesktopTimerSnapshot();
                           },
                           onPinnedChanged: (value) {
@@ -564,7 +572,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (rawAction.startsWith('opacity:')) {
       final value = double.tryParse(rawAction.substring('opacity:'.length));
       if (value != null && mounted) {
-        setState(() => _floatingTimerOpacity = value.clamp(.25, 1).toDouble());
+        setState(() => _floatingTimerOpacity = value.clamp(.20, 1).toDouble());
         _pushDesktopTimerSnapshot();
       }
       return;
@@ -572,7 +580,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (rawAction.startsWith('color:')) {
       final value = int.tryParse(rawAction.substring('color:'.length));
       if (value != null && mounted) {
-        setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
+        setState(() => _floatingTimerColorIndex = value.clamp(0, 15).toInt());
         _pushDesktopTimerSnapshot();
       }
       return;
