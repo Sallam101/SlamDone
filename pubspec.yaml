@@ -1,0 +1,33 @@
+name: supeslam
+description: SupeSlam GitHub-hosted PWA command center migrated from Autivra4 V6.4.1 with browser-local SQLite and Firebase sync.
+publish_to: "none"
+version: 7.1.0+110
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  sqflite_common: ^2.5.6
+  sqflite_common_ffi_web: ^1.1.2
+  file_picker: ^11.0.3
+  intl: ^0.20.3
+  uuid: ^4.6.0
+  firebase_core: ^4.13.0
+  firebase_auth: ^6.5.7
+  cloud_firestore: ^6.8.0
+  archive: ^4.0.7
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/soft_chime.wav

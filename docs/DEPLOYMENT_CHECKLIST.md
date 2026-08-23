@@ -1,0 +1,23 @@
+# SupeSlam Production Deployment Checklist
+
+- [ ] Repository is `Sallam101/SupeSlam` and production branch is `main`.
+- [ ] Firebase Google Authentication is enabled.
+- [ ] `sallam101.github.io` is an authorized Firebase Auth domain.
+- [ ] Cloud Firestore exists.
+- [ ] `firestore.rules` has been published.
+- [ ] GitHub Actions repository variables `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, and `FIREBASE_APP_ID` are set.
+- [ ] GitHub Pages source is GitHub Actions.
+- [ ] Pages workflow is green, including Python contract tests and `flutter test`.
+- [ ] `https://Sallam101.github.io/SupeSlam/` loads with the `/SupeSlam/` base path.
+- [ ] Google sign-in succeeds on PC.
+- [ ] Google sign-in succeeds on phone.
+- [ ] One test record syncs PC → phone and phone → PC.
+- [ ] Private Autivra migration JSON remains outside GitHub.
+- [ ] Migration import reports successful validation.
+- [ ] Big Picture / Mind Map layout matches the source.
+- [ ] Focus/General time history is present.
+- [ ] Habits and habit history are present.
+- [ ] Journal entries and journal history are present.
+- [ ] NorthStar, Rewards, Study Tables, and compatible settings are present.
+- [ ] NorthStar notes with embedded images render correctly after PC ↔ phone sync.
+- [ ] Second import of the same migration does not duplicate rows.
