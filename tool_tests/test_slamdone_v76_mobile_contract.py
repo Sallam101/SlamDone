@@ -46,9 +46,16 @@ class SlamDoneV76MobileContractTest(unittest.TestCase):
         self.assertIn('StructuredHierarchyView(', big)
         self.assertIn('math.max(720.0, viewport.maxWidth - 86)', structured)
 
-    def test_version_is_760(self):
+    def test_big_picture_mobile_flag_is_declared_in_build_scope(self):
+        big = self.read('lib/src/screens/big_picture_screen.dart')
+        build_start = big.index('Widget build(BuildContext context)')
+        return_start = big.index('return Padding(', build_start)
+        build_prefix = big[build_start:return_start]
+        self.assertIn('final mobile = MediaQuery.sizeOf(context).width < 700;', build_prefix)
+
+    def test_version_is_761(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version:\s*7\.6\.0\+')
+        self.assertRegex(pubspec, r'version:\s*7\.6\.1\+')
 
 if __name__ == '__main__':
     unittest.main()

@@ -39,7 +39,6 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
     if (_controlPreferenceLoaded) return;
     _controlPreferenceLoaded = true;
     final controller = AppScope.of(context);
-    final mobile = MediaQuery.sizeOf(context).width < 700;
     controller.readUiSetting('big_picture_controls_expanded').then((saved) {
       if (!mounted || saved == null) return;
       setState(() => _controlsExpanded = saved == 'true');
@@ -49,6 +48,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     final allItems = controller.workItems
         .where(
           (item) => !item.isDeleted && _visibleStatuses.contains(item.status),

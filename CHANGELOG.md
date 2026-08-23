@@ -1,3 +1,9 @@
+# SlamDone V7.6.1 — Mobile Build Hotfix
+
+- Fixed a Flutter compile error in Big Picture mobile mode: the `mobile` viewport flag is now declared inside `build()` where the hierarchy/canvas branches use it.
+- Added a regression contract that fails if the mobile viewport flag is moved outside the Big Picture build scope again.
+- No Firebase schema, migration format, desktop hierarchy layout, connector, or card-position changes.
+
 # SlamDone V7.6.0 — Mobile Reliability
 
 - Phone changes now schedule a prompt debounced Firestore push instead of relying only on the 15-second timer.
