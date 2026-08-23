@@ -49,7 +49,7 @@ class SlamDoneV74ContractTest(unittest.TestCase):
     def test_tables_support_excel_import_row_resize_and_cell_formatting(self):
         tables = self.read('lib/src/screens/study_tables_screen.dart')
         pubspec = self.read('pubspec.yaml')
-        self.assertIn("package:excel/excel.dart", tables)
+        self.assertIn("package:excel_community/excel_community.dart", tables)
         self.assertIn("allowedExtensions: const ['csv', 'tsv', 'xlsx']", tables)
         self.assertIn('Import Excel', tables)
         self.assertIn('rowHeights', tables)
@@ -57,11 +57,12 @@ class SlamDoneV74ContractTest(unittest.TestCase):
         self.assertIn('cellFormats', tables)
         self.assertIn('Bold cell', tables)
         self.assertIn('Cell color', tables)
-        self.assertRegex(pubspec, r'\n\s*excel:\s*\^')
+        self.assertIn('excel_community: ^2.2.1', pubspec)
+        self.assertNotRegex(pubspec, r'\n\s*excel:\s*\^')
 
     def test_version_is_v74(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertIn('version: 7.4.0+140', pubspec)
+        self.assertIn('version: 7.4.1+141', pubspec)
 
 
 if __name__ == '__main__':

@@ -22,6 +22,14 @@ class RepoContractTest(unittest.TestCase):
         self.assertIn('actions/upload-pages-artifact@v4', workflow)
         self.assertIn('actions/deploy-pages@v4', workflow)
 
+    def test_pages_removes_generated_flutter_template_widget_test(self):
+        workflow = (ROOT / '.github/workflows/pages.yml').read_text(encoding='utf-8')
+        self.assertIn('rm -f test/widget_test.dart', workflow)
+        self.assertLess(
+            workflow.index('rm -f test/widget_test.dart'),
+            workflow.index('flutter test'),
+        )
+
     def test_pages_build_injects_all_firebase_web_config(self):
         workflow = (ROOT / '.github/workflows/pages.yml').read_text(encoding='utf-8')
         required = (

@@ -1,3 +1,8 @@
+## 7.4.1 - 2026-08-23
+
+- Fixed GitHub Actions dependency resolution by replacing the unpublished `excel ^5.0.0` package reference with published `excel_community ^2.2.1`.
+- Updated the XLSX importer to use the maintained web/WASM-compatible community fork while keeping SlamDone's existing `archive 4.x` exports unchanged.
+
 # SlamDone V7.4.0 — Brand, Timer & Analytics Upgrade
 
 - Replaced the generic purple mark with the approved **S/check speed mark**, black/white/green wordmark treatment, and **STOP PLANNING. START FINISHING.** slogan.
