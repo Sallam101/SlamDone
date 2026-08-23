@@ -1,0 +1,12 @@
+SlamDone V7.7.0 patch
+
+1. Extract this ZIP.
+2. Upload the CONTENTS to the root of Sallam101/SlamDone, preserving folders.
+3. Commit directly to main.
+4. Wait for Build and deploy SlamDone PWA to turn green.
+5. Open SlamDone on the PC that contains the complete planner first.
+6. Settings -> Verify & repair sync. Wait for a "Verified sync" status with non-zero planner counts.
+7. Fully close/reopen the installed phone PWA, then Settings -> Verify & repair sync.
+8. Phone controls are compact by default; tap the filter/controls icon to expand them.
+
+No Autivra migration re-import is required.

@@ -21,10 +21,12 @@ class _FocusScreenState extends State<FocusScreen> {
   String _dueFilter = 'all';
   String? _selectedItemId;
   bool? _timerHidden;
+  bool _mobileGoalsVisible = false;
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     final engine = controller.timerEngine;
     _timerHidden ??= controller.focusPanelHidden;
     final now = DateTime.now();
@@ -152,6 +154,22 @@ class _FocusScreenState extends State<FocusScreen> {
           ),
         ),
         if (!(_timerHidden ?? false)) const SizedBox(height: 12),
+        if (mobile)
+          Card(
+            child: ListTile(
+              dense: true,
+              leading: const Icon(Icons.flag_outlined),
+              title: const Text('Focus goals'),
+              subtitle: const Text('Today • week • month'),
+              trailing: Icon(
+                _mobileGoalsVisible ? Icons.expand_less : Icons.expand_more,
+              ),
+              onTap: () => setState(
+                () => _mobileGoalsVisible = !_mobileGoalsVisible,
+              ),
+            ),
+          ),
+        if (!mobile || _mobileGoalsVisible) ...[
         _DailyGoalPanel(controller: controller),
         const SizedBox(height: 12),
         LayoutBuilder(
@@ -218,6 +236,7 @@ class _FocusScreenState extends State<FocusScreen> {
             );
           },
         ),
+        ],
         const SizedBox(height: 12),
         _FocusHistoryPanel(controller: controller),
       ],

@@ -63,7 +63,7 @@ class FirestoreSyncContractTest(unittest.TestCase):
         self.assertIn('syncNow(silent: true, pullRemote: false)', text)
         self.assertIn('bool pullRemote = true', text)
         self.assertIn('if (pullRemote) {', text)
-        sync_body = text[text.index('Future<void> syncNow'):text.index('Future<void> _pushQueueToFirestore')]
+        sync_body = text[text.index('Future<void> syncNow'):text.index('String _verifiedStatus')]
         self.assertNotIn('await _pushSettings(user)', sync_body)
         self.assertNotIn('await _pushTimerState(user)', sync_body)
 

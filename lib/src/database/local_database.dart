@@ -842,6 +842,29 @@ class LocalDatabase {
     };
   }
 
+  Future<List<Map<String, Object?>>> loadRowsForSync(
+    String entityType,
+  ) async {
+    const allowed = <String>{
+      'work_items',
+      'canvas_layouts',
+      'journal_entries',
+      'journal_versions',
+      'time_sessions',
+      'habits',
+      'habit_entries',
+      'northstar_notes',
+      'reward_ranks',
+      'study_tables',
+    };
+    if (!allowed.contains(entityType)) {
+      throw ArgumentError.value(entityType, 'entityType', 'Unsupported sync table');
+    }
+    return (await db.query(entityType))
+        .map((row) => Map<String, Object?>.from(row))
+        .toList(growable: false);
+  }
+
   Future<Map<String, Object?>?> cloudPayload(
     String entityType,
     String entityId,

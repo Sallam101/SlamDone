@@ -17,6 +17,65 @@ class AppRepository {
   final Uuid _uuid = const Uuid();
   late final String deviceId;
 
+
+  // Settings understood by the native Autivra4 V6 backup importer. Keep
+  // browser/Firebase transport identity out of the reverse export so loading
+  // the file into Autivra4 cannot replace that installation's Drive/device
+  // configuration.
+  static const Set<String> autivraCompatibleSettingKeys = {
+    'accent_color',
+    'background_color',
+    'card_color',
+    'daily_session_goal',
+    'dashboard_palette',
+    'do_first_importance',
+    'do_first_level',
+    'do_first_period',
+    'do_first_status',
+    'focus_panel_hidden',
+    'font_family',
+    'font_scale',
+    'habit_name_width',
+    'habit_row_heights_json',
+    'habit_totals_bold',
+    'journal_prompts_json',
+    'mind_map_text_colors_json',
+    'monthly_focus_days_goal',
+    'monthly_session_goal',
+    'northstar_body_scales_json',
+    'northstar_title_scales_json',
+    'points_goal',
+    'points_milestone',
+    'points_module',
+    'points_per_focus_minute',
+    'points_per_habit_checkin',
+    'points_project',
+    'points_subproject',
+    'points_task',
+    'tab_preferences_json',
+    'tasks_descendants',
+    'tasks_filter',
+    'tasks_level',
+    'text_color',
+    'theme_mode',
+    'weekly_focus_days_goal',
+    'weekly_session_goal',
+  };
+
+  static const Set<String> autivraTransportSettingKeys = {
+    'device_id',
+    'drive_sync_folder',
+    'sync_mode',
+    'floating_timer_command',
+    'floating_timer_heartbeat',
+  };
+
+  bool _isAutivraCompatibleSetting(String key) {
+    if (autivraTransportSettingKeys.contains(key)) return false;
+    if (autivraCompatibleSettingKeys.contains(key)) return true;
+    return key.startsWith('study_table_') && key.endsWith('_display');
+  }
+
   Future<void> initialize() async {
     deviceId = await database.getSetting('device_id') ?? _uuid.v4();
     await database.setSetting('device_id', deviceId);
@@ -606,6 +665,53 @@ class AppRepository {
 
   Future<void> saveTimeSession(TimeSession session) =>
       database.saveTimeSession(session);
+
+  Future<String?> exportForAutivra4() async {
+    final allSettings = await database.loadAllSettings();
+    final compatibleSettings = <String, String>{};
+    for (final entry in allSettings.entries) {
+      if (_isAutivraCompatibleSetting(entry.key)) {
+        compatibleSettings[entry.key] = entry.value;
+      }
+    }
+    // LocalDatabase.exportAllEntities() intentionally mirrors the native
+    // Autivra4 V6 entity list: work items/layouts/journals/focus/habits/
+    // NorthStar/rewards/study tables, without journal_versions or timer state.
+    final entities = await database.exportAllEntities();
+    const nativeEntities = <String>{
+      'work_items',
+      'canvas_layouts',
+      'journal_entries',
+      'time_sessions',
+      'habits',
+      'habit_entries',
+      'northstar_notes',
+      'reward_ranks',
+      'study_tables',
+    };
+    entities.removeWhere((key, _) => !nativeEntities.contains(key));
+    final payload = {
+      'version': 6,
+      'application': 'Autivra4',
+      'exportedAt': isoNow(),
+      'entities': entities,
+      'settings': compatibleSettings,
+    };
+
+    final fileName =
+        'Autivra4_Update_From_SlamDone_${DateFormat('yyyy-MM-dd_HHmm').format(DateTime.now())}.json';
+    final bytes = Uint8List.fromList(utf8.encode(
+      const JsonEncoder.withIndent('  ').convert(payload),
+    ));
+    final result = await FilePicker.saveFile(
+      dialogTitle: 'Export SlamDone progress for Autivra4',
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      bytes: bytes,
+    );
+    return result?.toString() ?? fileName;
+  }
 
   Future<String?> exportBackup() async {
     final payload = {

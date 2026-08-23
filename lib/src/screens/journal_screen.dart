@@ -18,6 +18,7 @@ class JournalScreen extends StatefulWidget {
 
 class _JournalScreenState extends State<JournalScreen> {
   bool _showArchived = false;
+  bool _mobileControlsVisible = false;
   String _folder = 'All';
   JournalPeriodFilter _period = JournalPeriodFilter.month;
   JournalViewMode _viewMode = JournalViewMode.medium;
@@ -26,6 +27,7 @@ class _JournalScreenState extends State<JournalScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     final folders = {
       'All',
       ...controller.journals
@@ -65,19 +67,40 @@ class _JournalScreenState extends State<JournalScreen> {
                               'Journal',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
-                            const Text(
-                              'Filter your Brain Dumping by time, then choose the card size that keeps review fast.',
-                            ),
+                            if (!mobile)
+                              const Text(
+                                'Filter your Brain Dumping by time, then choose the card size that keeps review fast.',
+                              ),
                           ],
                         ),
                       ),
-                      FilledButton.icon(
-                        onPressed: () => _openDate(context, DateTime.now()),
-                        icon: const Icon(Icons.today),
-                        label: const Text('Today'),
-                      ),
+                      if (mobile)
+                        IconButton.filledTonal(
+                          tooltip: 'Journal controls',
+                          onPressed: () => setState(
+                            () => _mobileControlsVisible = !_mobileControlsVisible,
+                          ),
+                          icon: Icon(
+                            _mobileControlsVisible
+                                ? Icons.tune
+                                : Icons.tune_outlined,
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      mobile
+                          ? IconButton.filled(
+                              tooltip: 'Today',
+                              onPressed: () => _openDate(context, DateTime.now()),
+                              icon: const Icon(Icons.today),
+                            )
+                          : FilledButton.icon(
+                              onPressed: () => _openDate(context, DateTime.now()),
+                              icon: const Icon(Icons.today),
+                              label: const Text('Today'),
+                            ),
                     ],
                   ),
+                  if (!mobile || _mobileControlsVisible) ...[
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -219,6 +242,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       ),
                     ],
                   ),
+                  ],
                 ],
               ),
             ),

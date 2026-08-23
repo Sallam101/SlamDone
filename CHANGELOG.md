@@ -93,3 +93,13 @@
 - Added separate daily Brain Dumping editor pages, local autosave, editor conflict lock, snapshots, and restoration.
 - Added General Focus without item selection, Linked Focus, Study Stopwatch, hidden timer panel, logged time, and Windows floating timer process.
 - Added V4 ID-preserving migration and V5 backup export.
+
+## 7.7.0 — Verified Sync Repair + Compact Phone Controls
+- Replaced transport-only “synced” messaging with a verified full-table reconciliation audit.
+- Full startup/manual/resume reconciliation now uploads missing existing local records even when they are absent from the dirty queue, while preserving revision/timestamp/device conflict rules.
+- Fixed Google sign-in busy-gate behavior that could suppress the first full sync while still showing a connected account.
+- Realtime entity changes invalidate stale audit counts and trigger a debounced re-verification.
+- Added **Verify & repair sync** and local/cloud audit counts in Settings.
+- Phone Big Picture, Journal, Do First, NorthStar, and Focus goal controls now default compact/collapsed.
+- Added **Export for Autivra4** using the recovered native V6 backup root/entity format and excluding browser/device transport settings; export reconciles cloud first.
+- Documented the recovered Autivra4 V6.4.1 importer limitation: it adds missing stable IDs but does not overwrite existing entity IDs without a native importer upgrade.

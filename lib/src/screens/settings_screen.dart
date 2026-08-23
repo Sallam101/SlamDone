@@ -42,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final sync = controller.syncService;
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
@@ -308,9 +309,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _section(context, 'Migration, saving and backup', [
           Text(sync.status),
           const SizedBox(height: 8),
-          const Text(
-            'SlamDone saves automatically in this browser. Use the private full migration file once to bring over goals, Big Picture/Mind Map layouts, focus history, habits, journals + journal history, NorthStar, rewards, study tables, settings and timer state. Stable IDs prevent duplicates.',
-          ),
+          if (!mobile)
+            const Text(
+              'SlamDone saves automatically in this browser. Use the private full migration file once to bring over goals, Big Picture/Mind Map layouts, focus history, habits, journals + journal history, NorthStar, rewards, study tables, settings and timer state. Stable IDs prevent duplicates.',
+            ),
+          if (mobile)
+            const Text('Backups, migration, and repair tools.'),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -327,9 +331,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 label: const Text('Download backup'),
               ),
               OutlinedButton.icon(
-                onPressed: sync.isBusy ? null : sync.syncNow,
+                onPressed: controller.exportForAutivra4,
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('Export for Autivra4'),
+              ),
+              OutlinedButton.icon(
+                onPressed: sync.isBusy ? null : () => sync.syncNow(),
                 icon: const Icon(Icons.sync),
-                label: const Text('Sync now'),
+                label: const Text('Verify & repair sync'),
               ),
               OutlinedButton.icon(
                 onPressed: sync.useLocalOnly,
@@ -338,6 +347,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
+          if (!mobile) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Autivra4 export uses the native V6 backup shape and keeps native device/Drive sync settings out of the file. Autivra4 V6.4.1 itself only imports missing record IDs; use the file as a full/fresh restore unless that native importer is upgraded to merge newer existing IDs.',
+            ),
+          ],
           if (_result != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -348,6 +363,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _section(context, 'Cross-device cloud sync', [
             Text(sync.status),
+            const SizedBox(height: 6),
+            Text(
+              'Sync audit: ${sync.auditSummary}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (sync.isSignedIn && !sync.verified)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text(
+                  'Connected is not the same as verified. Use Verify & repair sync on the PC and phone to reconcile every planner table.',
+                ),
+              ),
             const SizedBox(height: 8),
             if (sync.isSignedIn && sync.currentUser?.email != null)
               Text('Signed in as ${sync.currentUser!.email}'),
@@ -364,9 +391,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 if (sync.isSignedIn)
                   FilledButton.tonalIcon(
-                    onPressed: sync.isBusy ? null : sync.syncNow,
+                    onPressed: sync.isBusy ? null : () => sync.syncNow(),
                     icon: const Icon(Icons.sync),
-                    label: const Text('Sync now'),
+                    label: const Text('Verify & repair sync'),
                   ),
                 if (sync.isSignedIn)
                   OutlinedButton.icon(

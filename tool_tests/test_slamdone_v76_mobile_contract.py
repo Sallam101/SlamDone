@@ -53,9 +53,11 @@ class SlamDoneV76MobileContractTest(unittest.TestCase):
         build_prefix = big[build_start:return_start]
         self.assertIn('final mobile = MediaQuery.sizeOf(context).width < 700;', build_prefix)
 
-    def test_version_is_761(self):
+    def test_version_is_761_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version:\s*7\.6\.1\+')
+        match = __import__('re').search(r'version:\s*(\d+)\.(\d+)\.(\d+)\+', pubspec)
+        self.assertIsNotNone(match)
+        self.assertGreaterEqual(tuple(map(int, match.groups())), (7, 6, 1))
 
 if __name__ == '__main__':
     unittest.main()

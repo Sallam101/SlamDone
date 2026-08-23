@@ -24,7 +24,7 @@ class SlamDoneV752BigPictureContractTest(unittest.TestCase):
         self.assertIn("label: const Text('Completed')", big)
         self.assertIn("label: const Text('Archived')", big)
         self.assertIn("label: const Text('Goal')", big)
-        self.assertIn('child: !_controlsExpanded', big)
+        self.assertIn('mobile ? _mobileControlsVisible : _controlsExpanded', big)
         self.assertNotIn('Clean hierarchy by default.', big)
         self.assertNotIn('Wheel pan • Middle drag 4-way • Ctrl+wheel zoom', big)
 

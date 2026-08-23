@@ -67,3 +67,11 @@ Firebase web configuration is client configuration, not an admin credential. Fir
 See [MIGRATION_AUTIVRA4.md](MIGRATION_AUTIVRA4.md). The complete migration format includes the normal planner entities plus journal history and timer state that were not present in the old standard Autivra JSON export.
 
 After a successful import, SlamDone records the source checksum so importing the same migration file again is idempotent rather than duplicating records.
+
+## V7.7 verified cross-device repair
+If a device is signed in but shows missing planner data, use **Settings → Verify & repair sync**. V7.7 reconciles every planner entity table in both directions and reports verified local/cloud counts instead of treating a successful Firestore connection as proof that data matches.
+
+For a currently incomplete cloud, open SlamDone on the PC that has the full planner first and run **Verify & repair sync**. After it reports non-zero verified counts, open the phone and run the same action. Realtime listeners then keep normal edits flowing automatically.
+
+### Export back to Autivra4
+**Settings → Export for Autivra4** first reconciles SlamDone, then downloads a native Autivra4 V6-shaped JSON with the nine native entity tables and compatible settings while excluding device/Drive/Firebase transport identity. The recovered Autivra4 V6.4.1 importer adds missing IDs but skips existing entity IDs, so use this file as a fresh/full restore or missing-record import unless the native importer is upgraded to merge newer existing IDs.

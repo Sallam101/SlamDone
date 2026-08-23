@@ -20,6 +20,7 @@ class BigPictureScreen extends StatefulWidget {
 
 class _BigPictureScreenState extends State<BigPictureScreen> {
   bool _controlsExpanded = false;
+  bool _mobileControlsVisible = false;
   bool _advancedFiltersVisible = false;
   bool _controlPreferenceLoaded = false;
   bool _freeCanvas = false;
@@ -118,7 +119,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Wrap(
+                  mobile ? _buildMobileHeader(controller) : Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -178,7 +179,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                   AnimatedSize(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutCubic,
-                    child: !_controlsExpanded
+                    child: !(mobile ? _mobileControlsVisible : _controlsExpanded)
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -237,7 +238,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                   AnimatedSize(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutCubic,
-                    child: !_controlsExpanded || !_advancedFiltersVisible
+                    child: !(mobile ? _mobileControlsVisible : _controlsExpanded) || !_advancedFiltersVisible
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 12),
@@ -389,6 +390,84 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMobileHeader(AppController controller) {
+    final activeCount = controller.workItems
+        .where((item) => !item.isDeleted && item.status == WorkStatus.active)
+        .length;
+    final completedCount = controller.workItems
+        .where((item) => !item.isDeleted && item.status == WorkStatus.completed)
+        .length;
+    final archivedCount = controller.workItems
+        .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
+        .length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Big Picture',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            IconButton.filledTonal(
+              tooltip: 'Big Picture filters',
+              onPressed: () => setState(() {
+                _mobileControlsVisible = !_mobileControlsVisible;
+                if (!_mobileControlsVisible) _advancedFiltersVisible = false;
+              }),
+              icon: Icon(
+                _mobileControlsVisible
+                    ? Icons.filter_alt_off
+                    : Icons.filter_alt_outlined,
+              ),
+            ),
+            const SizedBox(width: 6),
+            IconButton.filled(
+              tooltip: 'Add goal',
+              onPressed: () => showWorkItemEditor(context, controller),
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: !_mobileControlsVisible
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _statusChip(
+                        label: const Text('Active'),
+                        icon: Icons.play_circle_outline,
+                        status: WorkStatus.active,
+                        count: activeCount,
+                      ),
+                      _statusChip(
+                        label: const Text('Completed'),
+                        icon: Icons.check_circle_outline,
+                        status: WorkStatus.completed,
+                        count: completedCount,
+                      ),
+                      _statusChip(
+                        label: const Text('Archived'),
+                        icon: Icons.archive_outlined,
+                        status: WorkStatus.archived,
+                        count: archivedCount,
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ],
     );
   }
 

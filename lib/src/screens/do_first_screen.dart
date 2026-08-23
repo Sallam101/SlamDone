@@ -21,6 +21,7 @@ class _DoFirstScreenState extends State<DoFirstScreen> {
   String _status = 'active';
   String _importance = 'all';
   bool _includeDescendants = false;
+  bool _mobileFiltersVisible = false;
   bool _loaded = false;
 
   @override
@@ -57,6 +58,7 @@ class _DoFirstScreenState extends State<DoFirstScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     final now = DateTime.now();
     final eligible = controller.workItems.where((item) {
       if (item.isDeleted || item.status == WorkStatus.archived) return false;
@@ -109,14 +111,28 @@ class _DoFirstScreenState extends State<DoFirstScreen> {
                               'Do First',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
-                            const Text(
-                              'Choose exactly which due, overdue, completed, important, or hierarchy items should appear.',
-                            ),
+                            if (!mobile)
+                              const Text(
+                                'Choose exactly which due, overdue, completed, important, or hierarchy items should appear.',
+                              ),
                           ],
                         ),
                       ),
+                      if (mobile)
+                        IconButton.filledTonal(
+                          tooltip: 'Do First filters',
+                          onPressed: () => setState(
+                            () => _mobileFiltersVisible = !_mobileFiltersVisible,
+                          ),
+                          icon: Icon(
+                            _mobileFiltersVisible
+                                ? Icons.filter_alt_off
+                                : Icons.filter_alt_outlined,
+                          ),
+                        ),
                     ],
                   ),
+                  if (!mobile || _mobileFiltersVisible) ...[
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
@@ -290,6 +306,7 @@ class _DoFirstScreenState extends State<DoFirstScreen> {
                       ),
                     ],
                   ),
+                  ],
                 ],
               ),
             ),

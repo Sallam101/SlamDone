@@ -21,6 +21,7 @@ class NorthStarScreen extends StatefulWidget {
 class _NorthStarScreenState extends State<NorthStarScreen> {
   bool _showHidden = false;
   bool _showArchived = false;
+  bool _mobileControlsVisible = false;
   bool _noteManipulationInProgress = false;
   String? _selectedNoteId;
   final TransformationController _transformController =
@@ -36,6 +37,7 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final mobile = MediaQuery.sizeOf(context).width < 700;
     final notes =
         controller.northStarNotes
             .where(
@@ -79,9 +81,13 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
                 children: [
                   const Icon(Icons.explore_outlined),
                   SizedBox(
-                    width: (MediaQuery.sizeOf(context).width - 74)
-                        .clamp(220, 520)
-                        .toDouble(),
+                    width: mobile
+                        ? (MediaQuery.sizeOf(context).width - 210)
+                            .clamp(130, 320)
+                            .toDouble()
+                        : (MediaQuery.sizeOf(context).width - 74)
+                            .clamp(220, 520)
+                            .toDouble(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -89,13 +95,31 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
                           'NorthStar',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        const Text(
-                          'A colorful, movable, resizable place for operating rules, images, links, and pinned reminders.',
-                          softWrap: true,
-                        ),
+                        if (!mobile)
+                          const Text(
+                            'A colorful, movable, resizable place for operating rules, images, links, and pinned reminders.',
+                            softWrap: true,
+                          ),
                       ],
                     ),
                   ),
+                  if (mobile)
+                    IconButton.filledTonal(
+                      tooltip: 'NorthStar controls',
+                      onPressed: () => setState(
+                        () => _mobileControlsVisible = !_mobileControlsVisible,
+                      ),
+                      icon: Icon(
+                        _mobileControlsVisible ? Icons.tune : Icons.tune_outlined,
+                      ),
+                    ),
+                  if (mobile)
+                    IconButton.filled(
+                      tooltip: 'Add note',
+                      onPressed: () => _edit(context),
+                      icon: const Icon(Icons.add),
+                    ),
+                  if (!mobile || _mobileControlsVisible) ...[
                   FilterChip(
                     label: const Text('Hidden'),
                     selected: _showHidden,
@@ -144,7 +168,9 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
                     icon: const Icon(Icons.description_outlined),
                     label: const Text('Export Word'),
                   ),
-                  FilledButton.icon(
+                  ],
+                  if (!mobile)
+                    FilledButton.icon(
                     onPressed: () => _edit(context),
                     icon: const Icon(Icons.add),
                     label: const Text('Note'),

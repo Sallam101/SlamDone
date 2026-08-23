@@ -1286,6 +1286,18 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  Future<void> exportForAutivra4() async {
+    // Pull any newer phone/cloud edits first so the native Autivra4 update
+    // file represents the latest reconciled SlamDone state on this PC.
+    await syncService.syncNow();
+    final file = await repository.exportForAutivra4();
+    message = file == null
+        ? 'Autivra4 export cancelled.'
+        : 'Autivra4-compatible update JSON downloaded: $file';
+    notifyListeners();
+  }
+
   Future<void> setFocusPanelHidden(bool hidden) async {
     focusPanelHidden = hidden;
     await database.setSetting('focus_panel_hidden', hidden.toString());
