@@ -1,3 +1,13 @@
+# SlamDone V7.11.0 — Desktop-Pinned Focus Timer
+
+- Desktop Pin now uses Chromium Document Picture-in-Picture on supported Chrome/Edge desktop so the timer stays always-on-top when the main SlamDone PWA/window is minimized.
+- The PiP timer mirrors the existing TimerEngine; it is a second presentation surface, not a second timer or database state.
+- Added a browser-visible deadline ticker based on the persisted `endAt` timestamp so the pinned display remains accurate when the main page is background-throttled.
+- Replaced the unreliable web `SystemSound` completion alert with the bundled `assets/audio/soft_chime.wav`, deduplicated by completion token.
+- Added an optional 25–100% transparency slider to both the in-app floating timer and desktop-pinned timer; the slider is hidden until the opacity button is pressed.
+- Timer color, Start/Pause/Resume, Reset, Stop & log, Stopwatch, title, and countdown structure remain available; unsupported browsers/mobile keep the existing in-app pin fallback.
+- Closing SlamDone completely may also close the browser-owned PiP window; Desktop Pin is designed to survive minimizing/switching apps, not exiting the PWA process.
+
 # SlamDone V7.10.0 — Overview Hierarchy Analytics + Excel
 
 - Expanded Overview period selection to Week, Month, Quarter, and Year with period-aware navigation and comparisons.

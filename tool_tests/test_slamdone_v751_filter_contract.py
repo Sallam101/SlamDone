@@ -1,6 +1,7 @@
 from pathlib import Path
 import hashlib
 import unittest
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,7 +30,9 @@ class SlamDoneV751FilterContractTest(unittest.TestCase):
 
     def test_version_is_v751_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version: 7\.(?:10|[6-9]|5\.[1-9])[0-9.]*\+[0-9]+')
+        match = re.search(r'version:\s*(\d+)\.(\d+)\.(\d+)\+', pubspec)
+        self.assertIsNotNone(match)
+        self.assertGreaterEqual(tuple(map(int, match.groups())), (7, 5, 1))
 
 
 if __name__ == '__main__':

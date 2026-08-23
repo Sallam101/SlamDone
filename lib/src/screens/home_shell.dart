@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
 import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
+import '../services/desktop_timer_bridge.dart';
 import '../widgets/floating_timer_overlay.dart';
 import '../widgets/slamdone_brand.dart';
 import 'big_picture_screen.dart';
@@ -32,12 +34,17 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   AppController? _lifecycleController;
+  AppController? _timerBridgeController;
+  DesktopTimerBridge? _desktopTimerBridge;
   final ScrollController _tabScrollController = ScrollController();
   late final List<Widget> _screens;
   int _lastAutoArchiveSequence = 0;
   Offset _floatingTimerOffset = const Offset(18, 18);
   Size _floatingTimerSize = const Size(218, 214);
   bool _floatingTimerPinned = true;
+  bool _desktopTimerOpen = false;
+  double _floatingTimerOpacity = 1.0;
+  int _floatingTimerColorIndex = 0;
   AppSection? _floatingTimerUnpinnedSection;
   final ValueNotifier<double> _floatingTimerPageScroll = ValueNotifier<double>(0);
 
@@ -58,7 +65,18 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _lifecycleController = AppScope.of(context);
+    final controller = AppScope.of(context);
+    _lifecycleController = controller;
+    if (!identical(_timerBridgeController, controller)) {
+      _timerBridgeController?.timerEngine.removeListener(_pushDesktopTimerSnapshot);
+      _desktopTimerBridge?.dispose();
+      _timerBridgeController = controller;
+      _desktopTimerBridge = DesktopTimerBridge(
+        onAction: _handleDesktopTimerAction,
+        onClosed: _handleDesktopTimerClosed,
+      );
+      controller.timerEngine.addListener(_pushDesktopTimerSnapshot);
+    }
   }
 
   @override
@@ -74,6 +92,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _timerBridgeController?.timerEngine.removeListener(_pushDesktopTimerSnapshot);
+    _desktopTimerBridge?.dispose();
     _tabScrollController.dispose();
     _floatingTimerPageScroll.dispose();
     super.dispose();
@@ -310,7 +330,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                       child: IndexedStack(index: bodyIndex, children: _screens),
                     ),
                   ),
-                  if (controller.floatingTimerVisible && timerBelongsToCurrentPage)
+                  if (controller.floatingTimerVisible &&
+                      !_desktopTimerOpen &&
+                      timerBelongsToCurrentPage)
                     Positioned(
                       left: left,
                       top: top,
@@ -325,7 +347,37 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                           compact: !desktop,
                           size: timerSize,
                           pinned: _floatingTimerPinned,
+                          opacity: _floatingTimerOpacity,
+                          colorIndex: _floatingTimerColorIndex,
+                          onOpacityChanged: (value) {
+                            setState(() {
+                              _floatingTimerOpacity = value.clamp(.25, 1).toDouble();
+                            });
+                            _pushDesktopTimerSnapshot();
+                          },
+                          onColorChanged: (value) {
+                            setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
+                            _pushDesktopTimerSnapshot();
+                          },
                           onPinnedChanged: (value) {
+                            if (value) {
+                              final bridge = _desktopTimerBridge;
+                              if (bridge != null && bridge.supported) {
+                                unawaited(
+                                  _openDesktopPinnedTimer(
+                                    controller,
+                                    timerSize,
+                                    left: left,
+                                    top: top,
+                                    maxTop: maxTop,
+                                  ),
+                                );
+                                return;
+                              }
+                            } else if (_desktopTimerOpen) {
+                              _returnDesktopTimerToApp();
+                              return;
+                            }
                             setState(() {
                               if (value) {
                                 final visibleTop = (top - _floatingTimerPageScroll.value)
@@ -415,6 +467,155 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         );
       },
     );
+  }
+
+  String _desktopTimerSnapshotJson(AppController controller, [Size? windowSize]) {
+    final state = controller.timerEngine.state;
+    final size = windowSize ?? _floatingTimerSize;
+    return jsonEncode({
+      'mode': state.mode.name,
+      'title': state.title.trim().isEmpty ? 'General focus' : state.title.trim(),
+      'durationSeconds': state.durationSeconds,
+      'remainingSeconds': state.remainingSeconds,
+      'elapsedSeconds': state.elapsedSeconds,
+      'running': state.running,
+      'paused': state.paused,
+      'autoRepeat': state.autoRepeat,
+      'startedAtMs': state.startedAt?.millisecondsSinceEpoch,
+      'endAtMs': state.endAt?.millisecondsSinceEpoch,
+      'updatedAtMs': state.updatedAt.millisecondsSinceEpoch,
+      'completionToken': state.completionToken,
+      'colorIndex': _floatingTimerColorIndex,
+      'opacity': _floatingTimerOpacity,
+      'windowWidth': size.width.round(),
+      'windowHeight': size.height.round(),
+    });
+  }
+
+  void _pushDesktopTimerSnapshot() {
+    final bridge = _desktopTimerBridge;
+    final controller = _timerBridgeController;
+    if (!_desktopTimerOpen || bridge == null || controller == null) return;
+    bridge.update(_desktopTimerSnapshotJson(controller));
+  }
+
+  Future<void> _openDesktopPinnedTimer(
+    AppController controller,
+    Size timerSize, {
+    required double left,
+    required double top,
+    required double maxTop,
+  }) async {
+    final bridge = _desktopTimerBridge;
+    if (bridge == null || !bridge.supported) return;
+    // open() invokes requestWindow synchronously before its first await so the
+    // browser keeps the Pin click's transient user activation.
+    final opened = await bridge.open(_desktopTimerSnapshotJson(controller, timerSize));
+    if (!mounted) return;
+    if (!opened) {
+      setState(() {
+        final visibleTop = (top - _floatingTimerPageScroll.value)
+            .clamp(0.0, maxTop)
+            .toDouble();
+        _floatingTimerOffset = Offset(left, visibleTop);
+        _floatingTimerPinned = true;
+        _floatingTimerUnpinnedSection = null;
+        _floatingTimerPageScroll.value = 0;
+      });
+      return;
+    }
+    setState(() {
+      _desktopTimerOpen = true;
+      _floatingTimerPinned = true;
+      _floatingTimerUnpinnedSection = null;
+      _floatingTimerPageScroll.value = 0;
+    });
+    _pushDesktopTimerSnapshot();
+  }
+
+  void _returnDesktopTimerToApp() {
+    final controller = _timerBridgeController;
+    _desktopTimerBridge?.close();
+    if (!mounted) return;
+    setState(() {
+      _desktopTimerOpen = false;
+      _floatingTimerPinned = false;
+      _floatingTimerUnpinnedSection = controller?.selectedSection;
+      _floatingTimerPageScroll.value = 0;
+    });
+  }
+
+  void _handleDesktopTimerClosed() {
+    if (!mounted) return;
+    final controller = _timerBridgeController;
+    setState(() {
+      _desktopTimerOpen = false;
+      _floatingTimerPinned = false;
+      _floatingTimerUnpinnedSection = controller?.selectedSection;
+      _floatingTimerPageScroll.value = 0;
+    });
+  }
+
+  void _handleDesktopTimerAction(String rawAction) {
+    final controller = _timerBridgeController;
+    if (controller == null) return;
+    final engine = controller.timerEngine;
+
+    if (rawAction.startsWith('opacity:')) {
+      final value = double.tryParse(rawAction.substring('opacity:'.length));
+      if (value != null && mounted) {
+        setState(() => _floatingTimerOpacity = value.clamp(.25, 1).toDouble());
+        _pushDesktopTimerSnapshot();
+      }
+      return;
+    }
+    if (rawAction.startsWith('color:')) {
+      final value = int.tryParse(rawAction.substring('color:'.length));
+      if (value != null && mounted) {
+        setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
+        _pushDesktopTimerSnapshot();
+      }
+      return;
+    }
+
+    switch (rawAction) {
+      case 'toggle':
+        if (!engine.isActive) {
+          unawaited(engine.start(
+            mode: TimerMode.general,
+            title: 'General focus',
+            durationMinutes: controller.defaultSessionMinutes,
+          ));
+        } else if (engine.state.paused) {
+          unawaited(controller.timerEngine.resume());
+        } else {
+          unawaited(controller.timerEngine.pause());
+        }
+      case 'reset':
+        unawaited(controller.timerEngine.reset());
+      case 'stop':
+        unawaited(controller.timerEngine.stop(saveSession: true));
+      case 'stopwatch':
+        unawaited(engine.start(
+          mode: TimerMode.stopwatch,
+          title: 'Study stopwatch',
+        ));
+      case 'deadline':
+        unawaited(controller.timerEngine.reconcileNow());
+      case 'unpin':
+        _returnDesktopTimerToApp();
+      case 'close':
+        _desktopTimerBridge?.close();
+        controller.hideFloatingTimer();
+        if (mounted) {
+          setState(() {
+            _desktopTimerOpen = false;
+            _floatingTimerPinned = false;
+          });
+        }
+      default:
+        return;
+    }
   }
 
   void _showAutoArchiveNoticeIfNeeded(AppController controller) {

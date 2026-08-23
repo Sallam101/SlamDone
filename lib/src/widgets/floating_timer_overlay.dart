@@ -21,6 +21,10 @@ class SlamDoneFloatingTimerOverlay extends StatefulWidget {
     required this.size,
     required this.pinned,
     required this.onPinnedChanged,
+    required this.opacity,
+    required this.onOpacityChanged,
+    required this.colorIndex,
+    required this.onColorChanged,
     this.compact = false,
   });
 
@@ -31,6 +35,10 @@ class SlamDoneFloatingTimerOverlay extends StatefulWidget {
   final Size size;
   final bool pinned;
   final ValueChanged<bool> onPinnedChanged;
+  final double opacity;
+  final ValueChanged<double> onOpacityChanged;
+  final int colorIndex;
+  final ValueChanged<int> onColorChanged;
   final bool compact;
 
   @override
@@ -40,7 +48,7 @@ class SlamDoneFloatingTimerOverlay extends StatefulWidget {
 
 class _SlamDoneFloatingTimerOverlayState
     extends State<SlamDoneFloatingTimerOverlay> {
-  int _colorIndex = 0;
+  bool _showOpacity = false;
 
   static const _timerColors = <Color>[
     SlamDoneBrand.brandGreen,
@@ -65,11 +73,15 @@ class _SlamDoneFloatingTimerOverlayState
   @override
   Widget build(BuildContext context) {
     final engine = widget.controller.timerEngine;
-    final accent = _timerColors[_colorIndex % _timerColors.length];
+    final safeColorIndex = widget.colorIndex.clamp(0, _timerColors.length - 1).toInt();
+    final accent = _timerColors[safeColorIndex];
     final density = _density;
     final radius = density == _TimerDensity.mini ? 10.0 : 16.0;
 
-    return Material(
+    return AnimatedOpacity(
+      opacity: widget.opacity.clamp(.25, 1).toDouble(),
+      duration: const Duration(milliseconds: 120),
+      child: Material(
       elevation: 18,
       borderRadius: BorderRadius.circular(radius),
       clipBehavior: Clip.antiAlias,
@@ -90,6 +102,38 @@ class _SlamDoneFloatingTimerOverlayState
                 ),
               ),
             ),
+            if (_showOpacity)
+              Positioned(
+                left: 8,
+                right: 8,
+                top: density == _TimerDensity.mini ? 31 : 35,
+                child: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.surface.withValues(alpha: .96),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    child: Row(
+                      children: [
+                        Icon(Icons.opacity, size: 15, color: accent),
+                        Expanded(
+                          child: Slider(
+                            min: .25,
+                            max: 1,
+                            divisions: 15,
+                            value: widget.opacity.clamp(.25, 1).toDouble(),
+                            onChanged: widget.onOpacityChanged,
+                          ),
+                        ),
+                        Text(
+                          '${(widget.opacity.clamp(.25, 1) * 100).round()}%',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             // Edge handles avoid forcing the pointer into one tiny corner and
             // feel much smoother on mouse/trackpad than a single drag target.
             Positioned(
@@ -126,6 +170,7 @@ class _SlamDoneFloatingTimerOverlayState
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -256,6 +301,17 @@ class _SlamDoneFloatingTimerOverlayState
                   size: mini ? 15 : 16,
                 ),
               ),
+              IconButton(
+                tooltip: _showOpacity ? 'Hide transparency control' : 'Timer transparency',
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                constraints: BoxConstraints.tightFor(
+                  width: utilitySize,
+                  height: utilitySize,
+                ),
+                onPressed: () => setState(() => _showOpacity = !_showOpacity),
+                icon: Icon(Icons.opacity, size: mini ? 15 : 16),
+              ),
               SizedBox(
                 width: utilitySize,
                 height: utilitySize,
@@ -264,7 +320,7 @@ class _SlamDoneFloatingTimerOverlayState
                   iconSize: mini ? 15 : 16,
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.palette_outlined),
-                  onSelected: (value) => setState(() => _colorIndex = value),
+                  onSelected: widget.onColorChanged,
                   itemBuilder: (context) => List.generate(
                     _timerColors.length,
                     (index) => PopupMenuItem<int>(

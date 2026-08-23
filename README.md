@@ -91,3 +91,9 @@ Tasks now includes compact toggles for **Active, Uncategorized, Completed, Archi
 
 ## V7.10 Overview analytics
 Overview supports Week / Month / Quarter / Year, six clickable hierarchy completion KPIs and trends, palette colors, and a selected-period Excel export.
+## V7.11 desktop-pinned focus timer
+
+On supported desktop Chrome/Edge, pressing **Pin** moves the existing SlamDone floating timer into a browser Document Picture-in-Picture window. That window is always-on-top, so minimizing SlamDone or switching to another study/work application no longer hides the timer. The PiP card mirrors the same TimerEngine state; unpinning returns the same running timer to SlamDone rather than starting a second timer.
+
+The timer now uses the bundled **soft_chime.wav** for completion instead of the unreliable Flutter web system alert. A small opacity button reveals a temporary 25–100% transparency slider, then hides it again when not needed. The in-app timer keeps the same title, analog/digital clock, Start/Pause/Resume, Reset, Stop & log, Stopwatch, resize, and color behavior. Unsupported browsers and mobile fall back to the existing in-app pin. Closing the entire SlamDone PWA may close the browser-owned PiP window; the always-on-top guarantee applies while SlamDone remains running/minimized.
+

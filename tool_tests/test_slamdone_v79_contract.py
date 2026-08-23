@@ -95,7 +95,9 @@ class SlamDoneV79ContractTest(unittest.TestCase):
     def test_release_version_is_790(self):
         pubspec = read('pubspec.yaml')
         changelog = read('CHANGELOG.md')
-        self.assertRegex(pubspec, r'version:\s*7\.(?:10\.0|9\.0)\+')
+        match = re.search(r'version:\s*(\d+)\.(\d+)\.(\d+)\+', pubspec)
+        self.assertIsNotNone(match)
+        self.assertGreaterEqual(tuple(map(int, match.groups())), (7, 9, 0))
         self.assertIn('7.9.0', changelog)
 
 

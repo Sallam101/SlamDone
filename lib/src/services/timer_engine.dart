@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/local_database.dart';
 import '../models/models.dart';
 import '../repositories/app_repository.dart';
+import 'timer_completion_chime.dart';
 
 class TimerEngine extends ChangeNotifier {
   TimerEngine({
@@ -53,6 +53,11 @@ class TimerEngine extends ChangeNotifier {
     _lastPersistedSecond = -1;
     notifyListeners();
   }
+
+  /// Reconcile immediately against the persisted end timestamp. The desktop
+  /// Picture-in-Picture surface calls this when its visible deadline reaches
+  /// zero so completion is not delayed by hidden-page timer throttling.
+  Future<void> reconcileNow() => _pulse();
 
   Future<void> _pulse() async {
     if (_processing) return;
@@ -129,6 +134,7 @@ class TimerEngine extends ChangeNotifier {
     int durationMinutes = 25,
     bool autoRepeat = false,
   }) async {
+    primeTimerCompletionChime();
     final now = DateTime.now().toUtc();
     final durationSeconds = durationMinutes.clamp(1, 720).toInt() * 60;
     _state = TimerStateRecord(
@@ -172,6 +178,7 @@ class TimerEngine extends ChangeNotifier {
 
   Future<void> resume() async {
     if (!_state.paused) return;
+    primeTimerCompletionChime();
     final now = DateTime.now().toUtc();
     _state = _state.copyWith(
       owner: role,
@@ -259,7 +266,7 @@ class TimerEngine extends ChangeNotifier {
     if (completedState.workItemId != null) {
       await repository.advanceChecklist(completedState.workItemId!);
     }
-    unawaited(_playSoftChime());
+    unawaited(playTimerCompletionChime(completedState.completionToken));
     if (_state.autoRepeat) {
       final duration = _state.durationSeconds;
       _state = _state.copyWith(
@@ -285,15 +292,6 @@ class TimerEngine extends ChangeNotifier {
     }
     await database.saveTimerState(_state);
     notifyListeners();
-  }
-
-  Future<void> _playSoftChime() async {
-    try {
-      await SystemSound.play(SystemSoundType.alert);
-    } catch (_) {
-      // Browser audio policies can block programmatic sounds. The timer state
-      // still completes and persists even when a chime cannot be played.
-    }
   }
 
   Future<void> _recordSession(

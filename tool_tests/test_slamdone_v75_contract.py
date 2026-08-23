@@ -1,5 +1,6 @@
 from pathlib import Path
 import unittest
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,7 +56,9 @@ class SlamDoneV75ContractTest(unittest.TestCase):
 
     def test_version_is_v75_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version: 7\.(?:10|[6-9]|5\.[0-9]+)\.[0-9]+\+[0-9]+')
+        match = re.search(r'version:\s*(\d+)\.(\d+)\.(\d+)\+', pubspec)
+        self.assertIsNotNone(match)
+        self.assertGreaterEqual(tuple(map(int, match.groups())), (7, 5, 0))
 
 
 if __name__ == '__main__':
