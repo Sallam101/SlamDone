@@ -99,7 +99,7 @@ class SyncService extends ChangeNotifier {
         _status = 'Firebase is not configured in this GitHub build';
       } else if (isSignedIn) {
         await startRealtime();
-        _status = 'SupeSlam Firestore sync ready';
+        _status = 'SlamDone Firestore sync ready';
         unawaited(syncNow(silent: true));
       } else {
         _status = 'Ready to connect Google for cross-device sync';
@@ -136,7 +136,7 @@ class SyncService extends ChangeNotifier {
       } catch (popupError) {
         _lastError = popupError;
         await FirebaseAuth.instance.signInWithRedirect(provider);
-        return 'Google sign-in is continuing in this browser. Return to SupeSlam after Google completes.';
+        return 'Google sign-in is continuing in this browser. Return to SlamDone after Google completes.';
       }
       await startRealtime();
       await syncNow();
@@ -148,7 +148,7 @@ class SyncService extends ChangeNotifier {
     } finally {
       _setBusy(
         false,
-        isSignedIn ? 'SupeSlam Firestore synced' : 'Ready to connect Google',
+        isSignedIn ? 'SlamDone Firestore synced' : 'Ready to connect Google',
       );
     }
   }
@@ -169,7 +169,7 @@ class SyncService extends ChangeNotifier {
       return;
     }
     final user = currentUser!;
-    _setBusy(true, silent ? _status : 'Syncing SupeSlam…', notify: !silent);
+    _setBusy(true, silent ? _status : 'Syncing SlamDone…', notify: !silent);
     try {
       // Explicit/manual sync pulls before push so an older queued local row
       // cannot overwrite a newer Firestore row. Periodic sync relies on the
@@ -182,7 +182,7 @@ class SyncService extends ChangeNotifier {
       await _pushQueueToFirestore(user);
       _lastSyncedAt = DateTime.now();
       _lastError = null;
-      _status = 'SupeSlam Firestore synced';
+      _status = 'SlamDone Firestore synced';
       await onRemoteChanged();
     } catch (error) {
       _lastError = error;
@@ -453,7 +453,7 @@ class SyncService extends ChangeNotifier {
             );
             await onRemoteChanged();
             _lastSyncedAt = DateTime.now();
-            _status = 'SupeSlam Firestore synced';
+            _status = 'SlamDone Firestore synced';
             notifyListeners();
           } catch (error) {
             _lastError = error;

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supeslam/src/migration/migration_models.dart';
+import 'package:slamdone/src/migration/migration_models.dart';
 
 void main() {
   Map<String, dynamic> validPayload() {

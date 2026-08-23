@@ -1,10 +1,10 @@
-# SupeSlam — GitHub PWA
+# SlamDone — GitHub PWA
 
-SupeSlam is the GitHub-hosted continuation of Autivra4 V6.4.1. It keeps the planner data model and core screens while moving daily use to one installable web app for PC and Android.
+SlamDone is the GitHub-hosted continuation of Autivra4 V6.4.1. It keeps the planner data model and core screens while moving daily use to one installable web app for PC and Android.
 
 Production URL after Pages is enabled:
 
-`https://Sallam101.github.io/SupeSlam/`
+`https://Sallam101.github.io/SlamDone/`
 
 ## Architecture
 
@@ -15,15 +15,23 @@ Production URL after Pages is enabled:
 - Large embedded NorthStar images are split into UID-scoped Firestore chunk documents so no planner document exceeds Firestore's per-document size limit; Firebase Storage is not required for this migration baseline.
 - Autivra migration happens from a private migration JSON chosen in the browser; personal migration files are never committed to GitHub.
 
-The planner UI writes to local SQLite first. SupeSlam then queues changed records for Firestore. Cloud records merge back into local SQLite using the existing Autivra ordering: higher revision, then newer `client_updated_at`, then device ID as deterministic tie-break.
+The planner UI writes to local SQLite first. SlamDone then queues changed records for Firestore. Cloud records merge back into local SQLite using the existing Autivra ordering: higher revision, then newer `client_updated_at`, then device ID as deterministic tie-break.
+
+## SlamDone 7.2 workflow improvements
+
+- Completing a nested **Task** starts a four-second **Undo** grace period, then archives it automatically. Parent goals/projects are never auto-archived.
+- Big Picture and Mind Map hide archived items by default and can filter them back in for review/unarchive.
+- Structured Big Picture, Free Canvas/Mind Map, and NorthStar support middle-mouse panning and Ctrl+wheel zoom.
+- Free Canvas cards preserve compact status/progress chips as cards are resized.
+- Focus includes a draggable in-app floating timer overlay, so the PWA does not depend on a Windows EXE.
 
 ## Deploy
 
-1. Create the GitHub repository `Sallam101/SupeSlam` with `main` as the production branch.
+1. Create the GitHub repository `Sallam101/SlamDone` with `main` as the production branch.
 2. Follow [FIREBASE_SETUP.md](FIREBASE_SETUP.md) and add the Firebase web configuration as GitHub **Repository variables**.
 3. In GitHub **Settings → Pages**, choose **GitHub Actions** as the source.
 4. Push to `main`. `.github/workflows/pages.yml` runs the contract tests, Flutter tests, release web build, and Pages deployment.
-5. Open `https://Sallam101.github.io/SupeSlam/` and sign in with Google.
+5. Open `https://Sallam101.github.io/SlamDone/` and sign in with Google.
 6. On Android Chrome, use **Add to Home screen / Install app** if you want the app-like launcher experience.
 
 Required repository variables:
@@ -42,4 +50,4 @@ Firebase web configuration is client configuration, not an admin credential. Fir
 
 See [MIGRATION_AUTIVRA4.md](MIGRATION_AUTIVRA4.md). The complete migration format includes the normal planner entities plus journal history and timer state that were not present in the old standard Autivra JSON export.
 
-After a successful import, SupeSlam records the source checksum so importing the same migration file again is idempotent rather than duplicating records.
+After a successful import, SlamDone records the source checksum so importing the same migration file again is idempotent rather than duplicating records.

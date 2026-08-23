@@ -21,7 +21,7 @@ class AutivraApp extends StatelessWidget {
         ? null
         : Color(controller.textColorValue);
     return MaterialApp(
-      title: 'SupeSlam',
+      title: 'SlamDone',
       debugShowCheckedModeBanner: false,
       theme: buildAutivraTheme(
         Brightness.light,

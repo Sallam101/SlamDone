@@ -1,5 +1,5 @@
-import 'package:supeslam/src/models/models.dart';
-import 'package:supeslam/src/widgets/hierarchy_layout.dart';
+import 'package:slamdone/src/models/models.dart';
+import 'package:slamdone/src/widgets/hierarchy_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

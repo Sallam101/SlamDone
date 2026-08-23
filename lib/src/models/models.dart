@@ -14,6 +14,16 @@ enum WorkItemType { goal, milestone, project, subproject, module, task }
 
 enum WorkStatus { active, completed, archived }
 
+enum WorkItemVisibilityFilter {
+  hideArchived,
+  activeOnly,
+  completedOnly,
+  archivedOnly,
+  completedAndArchived,
+  notCompleted,
+  all,
+}
+
 enum PriorityLevel { normal, important, urgent }
 
 enum EnergyLevel { none, low, high }
@@ -150,7 +160,20 @@ class WorkItem {
   final DateTime? deletedAt;
 
   bool get isDeleted => deletedAt != null;
-  bool get isCompleted => status == WorkStatus.completed;
+  bool get isArchived => status == WorkStatus.archived;
+  bool get isCompleted =>
+      status == WorkStatus.completed || status == WorkStatus.archived;
+
+  bool matchesVisibilityFilter(WorkItemVisibilityFilter filter) => switch (filter) {
+    WorkItemVisibilityFilter.hideArchived => status != WorkStatus.archived,
+    WorkItemVisibilityFilter.activeOnly => status == WorkStatus.active,
+    WorkItemVisibilityFilter.completedOnly => status == WorkStatus.completed,
+    WorkItemVisibilityFilter.archivedOnly => status == WorkStatus.archived,
+    WorkItemVisibilityFilter.completedAndArchived =>
+      status == WorkStatus.completed || status == WorkStatus.archived,
+    WorkItemVisibilityFilter.notCompleted => status != WorkStatus.completed,
+    WorkItemVisibilityFilter.all => true,
+  };
   int get checklistLeft =>
       (checklistTotal - checklistDone).clamp(0, 200).toInt();
   double get progress => checklistTotal <= 0

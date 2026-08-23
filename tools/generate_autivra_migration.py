@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a private, complete SupeSlam migration JSON from an Autivra SQLite DB."""
+"""Generate a private, complete SlamDone migration JSON from an Autivra SQLite DB."""
 
 from __future__ import annotations
 

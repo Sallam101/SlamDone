@@ -82,6 +82,11 @@ class _FocusScreenState extends State<FocusScreen> {
                     ],
                   ),
                 ),
+                FilledButton.tonalIcon(
+                  onPressed: controller.showFloatingTimer,
+                  icon: const Icon(Icons.picture_in_picture_alt_outlined),
+                  label: const Text('Open floating timer'),
+                ),
                 OutlinedButton.icon(
                   onPressed: () {
                     final next = !(_timerHidden ?? false);
@@ -1329,7 +1334,7 @@ Future<void> _showFocusBreakdown(
         OutlinedButton.icon(
           onPressed: () async {
             final path = await FocusHistoryExportService.exportRange(
-              title: 'SupeSlam_Focus_$title',
+              title: 'SlamDone_Focus_$title',
               start: start,
               endExclusive: endExclusive,
               sessions: sessions,

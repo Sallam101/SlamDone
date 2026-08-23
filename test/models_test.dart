@@ -1,4 +1,4 @@
-import 'package:supeslam/src/models/models.dart';
+import 'package:slamdone/src/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

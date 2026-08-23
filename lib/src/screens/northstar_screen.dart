@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
@@ -23,6 +25,7 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
   String? _selectedNoteId;
   final TransformationController _transformController =
       TransformationController();
+  bool _middleMousePanning = false;
 
   @override
   void dispose() {
@@ -163,15 +166,24 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: InteractiveViewer(
-                      transformationController: _transformController,
-                      minScale: 0.35,
-                      maxScale: 2.4,
-                      panEnabled: !_noteManipulationInProgress,
-                      scaleEnabled: !_noteManipulationInProgress,
-                      boundaryMargin: const EdgeInsets.all(600),
-                      constrained: false,
-                      child: SizedBox(
+                    child: Listener(
+                      behavior: HitTestBehavior.translucent,
+                      onPointerSignal: _handlePointerSignal,
+                      onPointerDown: _handlePointerDown,
+                      onPointerMove: _handlePointerMove,
+                      onPointerUp: _handlePointerUp,
+                      onPointerCancel: _handlePointerCancel,
+                      child: InteractiveViewer(
+                        transformationController: _transformController,
+                        minScale: 0.35,
+                        maxScale: 2.4,
+                        panEnabled:
+                            !_noteManipulationInProgress && !_middleMousePanning,
+                        scaleEnabled: !_noteManipulationInProgress,
+                        trackpadScrollCausesScale: false,
+                        boundaryMargin: const EdgeInsets.all(600),
+                        constrained: false,
+                        child: SizedBox(
                         width: 2600,
                         height: 1800,
                         child: Stack(
@@ -218,6 +230,7 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
                       ),
                     ),
                   ),
+                ),
                   if (activeNote != null)
                     Positioned(
                       left: 14,
@@ -332,6 +345,45 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
         ],
       ),
     );
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
+      final scroll = resolved as PointerScrollEvent;
+      if (HardwareKeyboard.instance.isControlPressed) {
+        _zoomBy(scroll.scrollDelta.dy > 0 ? 0.90 : 1.10);
+      } else {
+        _panViewport(-scroll.scrollDelta.dx, -scroll.scrollDelta.dy);
+      }
+    });
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if ((event.buttons & kMiddleMouseButton) != 0) {
+      setState(() => _middleMousePanning = true);
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (_middleMousePanning && (event.buttons & kMiddleMouseButton) != 0) {
+      _panViewport(event.delta.dx, event.delta.dy);
+    }
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    if (_middleMousePanning) setState(() => _middleMousePanning = false);
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    if (_middleMousePanning) setState(() => _middleMousePanning = false);
+  }
+
+  void _panViewport(double screenDx, double screenDy) {
+    final current = _transformController.value;
+    final scale = current.getMaxScaleOnAxis().clamp(0.35, 2.4).toDouble();
+    _transformController.value = current.clone()
+      ..translateByDouble(screenDx / scale, screenDy / scale, 0, 1);
   }
 
   void _zoomBy(double factor) {

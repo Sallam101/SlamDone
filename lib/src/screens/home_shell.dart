@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
+import '../widgets/floating_timer_overlay.dart';
 import 'big_picture_screen.dart';
 import 'calendar_screen.dart';
 import 'do_first_screen.dart';
@@ -29,6 +30,8 @@ class _HomeShellState extends State<HomeShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _tabScrollController = ScrollController();
   late final List<Widget> _screens;
+  int _lastAutoArchiveSequence = 0;
+  Offset _floatingTimerOffset = const Offset(18, 18);
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    _showAutoArchiveNoticeIfNeeded(controller);
     final tabs = controller.tabPreferences.isEmpty
         ? AppController.defaultTabPreferences()
         : controller.tabPreferences;
@@ -83,7 +87,7 @@ class _HomeShellState extends State<HomeShell> {
                 const Icon(Icons.auto_awesome_mosaic),
                 const SizedBox(width: 8),
                 const Expanded(
-                  child: Text('SupeSlam', overflow: TextOverflow.ellipsis),
+                  child: Text('SlamDone', overflow: TextOverflow.ellipsis),
                 ),
                 if (desktop && controller.message != null) ...[
                   const SizedBox(width: 12),
@@ -188,7 +192,7 @@ class _HomeShellState extends State<HomeShell> {
                       children: [
                         const ListTile(
                           leading: Icon(Icons.auto_awesome_mosaic),
-                          title: Text('SupeSlam'),
+                          title: Text('SlamDone'),
                           subtitle: Text('All planner sections'),
                         ),
                         ListTile(
@@ -224,7 +228,49 @@ class _HomeShellState extends State<HomeShell> {
                     ),
                   ),
                 ),
-          body: IndexedStack(index: bodyIndex, children: _screens),
+          body: LayoutBuilder(
+            builder: (context, bodyConstraints) {
+              final timerWidth = desktop ? 326.0 : 286.0;
+              final maxLeft = (bodyConstraints.maxWidth - timerWidth - 8)
+                  .clamp(0.0, double.infinity)
+                  .toDouble();
+              final maxTop = (bodyConstraints.maxHeight - 330)
+                  .clamp(0.0, double.infinity)
+                  .toDouble();
+              final left = _floatingTimerOffset.dx.clamp(0.0, maxLeft).toDouble();
+              final top = _floatingTimerOffset.dy.clamp(0.0, maxTop).toDouble();
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: IndexedStack(index: bodyIndex, children: _screens),
+                  ),
+                  if (controller.floatingTimerVisible)
+                    Positioned(
+                      left: left,
+                      top: top,
+                      child: SlamDoneFloatingTimerOverlay(
+                        controller: controller,
+                        compact: !desktop,
+                        onClose: controller.hideFloatingTimer,
+                        onDragDelta: (delta) {
+                          setState(() {
+                            _floatingTimerOffset = Offset(
+                              (_floatingTimerOffset.dx + delta.dx)
+                                  .clamp(0.0, maxLeft)
+                                  .toDouble(),
+                              (_floatingTimerOffset.dy + delta.dy)
+                                  .clamp(0.0, maxTop)
+                                  .toDouble(),
+                            );
+                          });
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           bottomNavigationBar: desktop
               ? null
               : NavigationBar(
@@ -266,6 +312,29 @@ class _HomeShellState extends State<HomeShell> {
         );
       },
     );
+  }
+
+  void _showAutoArchiveNoticeIfNeeded(AppController controller) {
+    final notice = controller.autoArchiveNotice;
+    if (notice == null || notice.sequence == _lastAutoArchiveSequence) return;
+    _lastAutoArchiveSequence = notice.sequence;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: Text(
+            'Completed & archived: ${notice.title}. It will disappear in 4 seconds.',
+          ),
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () => controller.undoAutoArchive(notice.itemId),
+          ),
+        ),
+      );
+    });
   }
 
   Widget _screen(AppSection section) => switch (section) {

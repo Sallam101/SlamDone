@@ -15,10 +15,10 @@ class RepoContractTest(unittest.TestCase):
         self.assertIn('match /users/{uid}/{document=**}', rules)
         self.assertIn('request.auth.uid == uid', rules)
 
-    def test_pages_build_targets_supeslam_base_href(self):
+    def test_pages_build_targets_slamdone_base_href(self):
         workflow = (ROOT / '.github/workflows/pages.yml').read_text(encoding='utf-8')
         self.assertIn('flutter test', workflow)
-        self.assertIn('flutter build web --release --base-href /SupeSlam/', workflow)
+        self.assertIn('flutter build web --release --base-href /SlamDone/', workflow)
         self.assertIn('actions/upload-pages-artifact@v4', workflow)
         self.assertIn('actions/deploy-pages@v4', workflow)
 
@@ -40,7 +40,7 @@ class RepoContractTest(unittest.TestCase):
             (ROOT / name).read_text(encoding='utf-8')
             for name in ('README.md', 'FIREBASE_SETUP.md', 'MIGRATION_AUTIVRA4.md')
         )
-        self.assertIn('https://Sallam101.github.io/SupeSlam/', combined)
+        self.assertIn('https://Sallam101.github.io/SlamDone/', combined)
         for name in (
             'FIREBASE_API_KEY',
             'FIREBASE_AUTH_DOMAIN',

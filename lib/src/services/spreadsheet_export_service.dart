@@ -134,12 +134,12 @@ ${cols.toString()}<sheetData>${sheetRows.toString()}</sheetData>
     addText(
       'docProps/core.xml',
       '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${_xmlEscape(title)}</dc:title><dc:creator>SupeSlam</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">$now</dcterms:created></cp:coreProperties>''',
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${_xmlEscape(title)}</dc:title><dc:creator>SlamDone</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">$now</dcterms:created></cp:coreProperties>''',
     );
     addText(
       'docProps/app.xml',
       '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>SupeSlam</Application></Properties>''',
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>SlamDone</Application></Properties>''',
     );
     return ZipEncoder().encodeBytes(archive);
   }
@@ -174,7 +174,7 @@ ${cols.toString()}<sheetData>${sheetRows.toString()}</sheetData>
 
   static String _safeFileName(String value) {
     final cleaned = value.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_').trim();
-    return cleaned.isEmpty ? 'SupeSlam_Study_Table' : cleaned;
+    return cleaned.isEmpty ? 'SlamDone_Study_Table' : cleaned;
   }
 
   static String _xmlEscape(String value) => value

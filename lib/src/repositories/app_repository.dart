@@ -20,7 +20,7 @@ class AppRepository {
   Future<void> initialize() async {
     deviceId = await database.getSetting('device_id') ?? _uuid.v4();
     await database.setSetting('device_id', deviceId);
-    // SupeSlam Web starts empty on a new browser so an Autivra4 migration
+    // SlamDone Web starts empty on a new browser so an Autivra4 migration
     // cannot be mixed with demo goals, default ranks, or sample study tables.
   }
 
@@ -297,6 +297,9 @@ class AppRepository {
   }
 
   WorkItem _normalizeItemState(WorkItem item) {
+    if (item.status == WorkStatus.archived) {
+      return item;
+    }
     if (item.checklistTotal > 0 && item.checklistDone >= item.checklistTotal) {
       return item.copyWith(
         checklistDone: item.checklistTotal,
@@ -607,19 +610,19 @@ class AppRepository {
   Future<String?> exportBackup() async {
     final payload = {
       'version': 7,
-      'application': 'SupeSlam',
+      'application': 'SlamDone',
       'migrationSource': 'Autivra4-compatible',
       'exportedAt': isoNow(),
       'entities': await database.exportAllEntities(),
       'settings': await database.loadAllSettings(),
     };
     final fileName =
-        'SupeSlam_Backup_${DateFormat('yyyy-MM-dd_HHmm').format(DateTime.now())}.json';
+        'SlamDone_Backup_${DateFormat('yyyy-MM-dd_HHmm').format(DateTime.now())}.json';
     final bytes = Uint8List.fromList(utf8.encode(
       const JsonEncoder.withIndent('  ').convert(payload),
     ));
     final result = await FilePicker.saveFile(
-      dialogTitle: 'Export SupeSlam backup',
+      dialogTitle: 'Export SlamDone backup',
       fileName: fileName,
       type: FileType.custom,
       allowedExtensions: ['json'],
@@ -630,7 +633,7 @@ class AppRepository {
 
   Future<MigrationImportResult> importMigrationJsonFile() async {
     final picked = await FilePicker.pickFiles(
-      dialogTitle: 'Select the private Autivra4 to SupeSlam migration JSON',
+      dialogTitle: 'Select the private Autivra4 to SlamDone migration JSON',
       type: FileType.custom,
       allowedExtensions: ['json'],
       withData: true,
@@ -661,7 +664,7 @@ class AppRepository {
 
   Future<int> importV4JsonFile() async {
     final picked = await FilePicker.pickFiles(
-      dialogTitle: 'Select an Autivra4 / SupeSlam / Goal Tree JSON backup',
+      dialogTitle: 'Select an Autivra4 / SlamDone / Goal Tree JSON backup',
       type: FileType.custom,
       allowedExtensions: ['json'],
       withData: true,

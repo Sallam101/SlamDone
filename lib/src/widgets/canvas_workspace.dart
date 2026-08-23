@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/models.dart';
 import 'canvas_painters.dart';
@@ -52,6 +54,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
       TransformationController();
   late Map<String, CanvasLayout> _working;
   bool _manipulatingNode = false;
+  bool _middleMousePanning = false;
 
   @override
   void initState() {
@@ -105,15 +108,23 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
         color: scheme.surfaceContainerLowest,
         child: Stack(
           children: [
-            InteractiveViewer(
-              transformationController: _transformationController,
-              constrained: false,
-              panEnabled: !_manipulatingNode,
-              scaleEnabled: !_manipulatingNode,
-              minScale: 0.2,
-              maxScale: 3.2,
-              boundaryMargin: const EdgeInsets.all(1200),
-              child: SizedBox(
+            Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerSignal: _handlePointerSignal,
+              onPointerDown: _handlePointerDown,
+              onPointerMove: _handlePointerMove,
+              onPointerUp: _handlePointerUp,
+              onPointerCancel: _handlePointerCancel,
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                constrained: false,
+                panEnabled: !_manipulatingNode && !_middleMousePanning,
+                scaleEnabled: !_manipulatingNode,
+                trackpadScrollCausesScale: false,
+                minScale: 0.2,
+                maxScale: 3.2,
+                boundaryMargin: const EdgeInsets.all(1200),
+                child: SizedBox(
                 width: _worldSize.width,
                 height: _worldSize.height,
                 child: Stack(
@@ -176,6 +187,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                   ],
                 ),
               ),
+            ),
             ),
             Positioned(
               right: 14,
@@ -441,6 +453,16 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                         await widget.onLayoutChanged(next);
                       }
                       break;
+                    case 'unarchive':
+                      if (widget.onItemChanged != null) {
+                        await widget.onItemChanged!(
+                          item.copyWith(
+                            status: WorkStatus.completed,
+                            gtdStatus: GtdStatus.completed,
+                          ),
+                        );
+                      }
+                      break;
                     case 'textColor':
                       final current = widget.viewKind == CanvasViewKind.mindMap
                           ? widget.textColorOverrides[item.id]
@@ -495,6 +517,11 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                     const PopupMenuItem(
                       value: 'textColor',
                       child: Text('Change text color'),
+                    ),
+                  if (item.isArchived && widget.onItemChanged != null)
+                    const PopupMenuItem(
+                      value: 'unarchive',
+                      child: Text('Unarchive item'),
                     ),
                   const PopupMenuDivider(),
                   const PopupMenuItem(
@@ -653,28 +680,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
               ],
               if (showMeta) ...[
                 if (!compact && !showChecklist) const Spacer(),
-                Row(
-                  children: [
-                    Flexible(
-                      child: _statusPill(
-                        context,
-                        item.priority.name,
-                        _priorityColor(item.priority, scheme),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    if (item.dueDate != null)
-                      Expanded(
-                        child: Text(
-                          'Due ${MaterialLocalizations.of(context).formatShortDate(item.dueDate!.toLocal())}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.end,
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
-                  ],
-                ),
+                _buildBigPictureMeta(context, item, scheme),
               ],
               if (showChecklist) ...[
                 const SizedBox(height: 8),
@@ -684,6 +690,65 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
           ),
         );
       },
+    );
+  }
+
+
+  Widget _buildBigPictureMeta(
+    BuildContext context,
+    WorkItem item,
+    ColorScheme scheme,
+  ) {
+    final statusColor = switch (item.status) {
+      WorkStatus.active => scheme.primary,
+      WorkStatus.completed => Colors.green.shade700,
+      WorkStatus.archived => scheme.outline,
+    };
+    final chips = <Widget>[
+      _statusPill(
+        context,
+        item.priority.name.toUpperCase(),
+        _priorityColor(item.priority, scheme),
+      ),
+      const SizedBox(width: 5),
+      _statusPill(context, item.status.name.toUpperCase(), statusColor),
+      if (item.urgent) ...[
+        const SizedBox(width: 5),
+        _statusPill(context, 'URGENT', scheme.error),
+      ],
+      if (item.energyLevel != EnergyLevel.none) ...[
+        const SizedBox(width: 5),
+        _statusPill(
+          context,
+          '${item.energyLevel.name.toUpperCase()} ENERGY',
+          item.energyLevel == EnergyLevel.high
+              ? const Color(0xFFEF6C00)
+              : const Color(0xFF0288D1),
+        ),
+      ],
+      if (item.dueDate != null) ...[
+        const SizedBox(width: 5),
+        _statusPill(
+          context,
+          'DUE ${MaterialLocalizations.of(context).formatShortDate(item.dueDate!.toLocal())}',
+          scheme.tertiary,
+        ),
+      ],
+      if (item.checklistTotal > 0) ...[
+        const SizedBox(width: 5),
+        _statusPill(
+          context,
+          '${item.checklistDone}/${item.checklistTotal} • ${(item.progress * 100).round()}%',
+          scheme.secondary,
+        ),
+      ],
+    ];
+    return SizedBox(
+      height: 25,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: chips),
+      ),
     );
   }
 
@@ -865,10 +930,53 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
     );
   }
 
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
+      final scroll = resolved as PointerScrollEvent;
+      if (HardwareKeyboard.instance.isControlPressed) {
+        final factor = scroll.scrollDelta.dy > 0 ? 0.90 : 1.10;
+        _zoom(factor);
+      } else {
+        _panViewport(-scroll.scrollDelta.dx, -scroll.scrollDelta.dy);
+      }
+    });
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if ((event.buttons & kMiddleMouseButton) != 0) {
+      setState(() => _middleMousePanning = true);
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (_middleMousePanning && (event.buttons & kMiddleMouseButton) != 0) {
+      _panViewport(event.delta.dx, event.delta.dy);
+    }
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    if (_middleMousePanning) setState(() => _middleMousePanning = false);
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    if (_middleMousePanning) setState(() => _middleMousePanning = false);
+  }
+
+  void _panViewport(double screenDx, double screenDy) {
+    final current = _transformationController.value;
+    final scale = current.getMaxScaleOnAxis().clamp(0.2, 3.2).toDouble();
+    _transformationController.value = current.clone()
+      ..translateByDouble(screenDx / scale, screenDy / scale, 0, 1);
+  }
+
   void _zoom(double factor) {
     final current = _transformationController.value;
+    final scale = current.getMaxScaleOnAxis().clamp(0.2, 3.2).toDouble();
+    final target = (scale * factor).clamp(0.2, 3.2).toDouble();
+    final ratio = target / scale;
     _transformationController.value = current.clone()
-      ..scaleByDouble(factor, factor, factor, 1.0);
+      ..scaleByDouble(ratio, ratio, ratio, 1.0);
   }
 
   Color _typeColor(WorkItemType type, ColorScheme scheme) {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supeslam/src/sync/conflict_resolver.dart';
+import 'package:slamdone/src/sync/conflict_resolver.dart';
 
 void main() {
   Map<String, Object?> row({

@@ -19,12 +19,17 @@ class MindMapScreen extends StatefulWidget {
 class _MindMapScreenState extends State<MindMapScreen> {
   bool _toolbarVisible = true;
   WorkItemType? _levelFilter;
+  WorkItemVisibilityFilter _visibilityFilter =
+      WorkItemVisibilityFilter.hideArchived;
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final allItems = controller.workItems
-        .where((item) => !item.isDeleted)
+        .where(
+          (item) =>
+              !item.isDeleted && item.matchesVisibilityFilter(_visibilityFilter),
+        )
         .toList();
     var layouts = <String, CanvasLayout>{
       for (var index = 0; index < allItems.length; index++)
@@ -106,6 +111,29 @@ class _MindMapScreenState extends State<MindMapScreen> {
                               runSpacing: 8,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
+                                SizedBox(
+                                  width: 190,
+                                  child: DropdownButtonFormField<WorkItemVisibilityFilter>(
+                                    initialValue: _visibilityFilter,
+                                    isDense: true,
+                                    decoration: const InputDecoration(
+                                      labelText: 'State',
+                                    ),
+                                    items: WorkItemVisibilityFilter.values
+                                        .map(
+                                          (value) => DropdownMenuItem(
+                                            value: value,
+                                            child: Text(_visibilityLabel(value)),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        setState(() => _visibilityFilter = value);
+                                      }
+                                    },
+                                  ),
+                                ),
                                 SizedBox(
                                   width: (MediaQuery.sizeOf(context).width - 70)
                                       .clamp(220, 520)
@@ -190,6 +218,16 @@ class _MindMapScreenState extends State<MindMapScreen> {
       ),
     );
   }
+
+  String _visibilityLabel(WorkItemVisibilityFilter value) => switch (value) {
+    WorkItemVisibilityFilter.hideArchived => 'Active + completed',
+    WorkItemVisibilityFilter.activeOnly => 'Active only',
+    WorkItemVisibilityFilter.completedOnly => 'Completed only',
+    WorkItemVisibilityFilter.archivedOnly => 'Archived only',
+    WorkItemVisibilityFilter.completedAndArchived => 'Completed + archived',
+    WorkItemVisibilityFilter.notCompleted => 'Everything except completed',
+    WorkItemVisibilityFilter.all => 'All items',
+  };
 
   Future<void> _autoArrange(
     AppController controller,

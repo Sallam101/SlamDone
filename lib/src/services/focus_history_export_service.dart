@@ -80,7 +80,7 @@ class FocusHistoryExportService {
       (seconds / 3600).toStringAsFixed(2),
     ]);
     return SpreadsheetExportService.exportTable(
-      title: 'SupeSlam_Focus_History_$year',
+      title: 'SlamDone_Focus_History_$year',
       columns: const [
         'Scope',
         'Period',

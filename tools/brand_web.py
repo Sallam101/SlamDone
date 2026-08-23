@@ -7,8 +7,8 @@ manifest_path = web / 'manifest.json'
 if manifest_path.exists():
     data = json.loads(manifest_path.read_text(encoding='utf-8'))
     data.update({
-        'name': 'SupeSlam',
-        'short_name': 'SupeSlam',
+        'name': 'SlamDone',
+        'short_name': 'SlamDone',
         'description': 'Your goals, focus, habits, journal, North Star, calendar and progress command center.',
         'display': 'standalone',
         'start_url': '.',
@@ -20,8 +20,8 @@ if manifest_path.exists():
 index = web / 'index.html'
 if index.exists():
     text = index.read_text(encoding='utf-8')
-    text = text.replace('<title>supeslam</title>', '<title>SupeSlam</title>')
-    text = text.replace('<title>Supeslam</title>', '<title>SupeSlam</title>')
+    text = text.replace('<title>slamdone</title>', '<title>SlamDone</title>')
+    text = text.replace('<title>Slamdone</title>', '<title>SlamDone</title>')
     if 'name="description"' not in text:
-        text = text.replace('</head>', '  <meta name="description" content="SupeSlam personal command center">\n</head>')
+        text = text.replace('</head>', '  <meta name="description" content="SlamDone personal command center">\n</head>')
     index.write_text(text, encoding='utf-8')

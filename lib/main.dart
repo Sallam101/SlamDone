@@ -47,7 +47,7 @@ void _installErrorBoundary() {
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Refresh the page or reopen SupeSlam. Your browser-saved data is not removed.',
+                    'Refresh the page or reopen SlamDone. Your browser-saved data is not removed.',
                     textAlign: TextAlign.center,
                   ),
                 ],

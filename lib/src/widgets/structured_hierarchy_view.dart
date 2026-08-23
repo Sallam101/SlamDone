@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/app_controller.dart';
 import '../models/models.dart';
@@ -141,6 +143,7 @@ class _StructuredHierarchyViewState extends State<StructuredHierarchyView> {
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
   double _zoom = 1.0;
+  bool _middleMousePanning = false;
 
   @override
   void dispose() {
@@ -223,8 +226,15 @@ class _StructuredHierarchyViewState extends State<StructuredHierarchyView> {
           ),
         );
 
-        return Stack(
-          children: [
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerSignal: _handlePointerSignal,
+          onPointerDown: _handlePointerDown,
+          onPointerMove: _handlePointerMove,
+          onPointerUp: _handlePointerUp,
+          onPointerCancel: _handlePointerCancel,
+          child: Stack(
+            children: [
             Positioned.fill(
               child: Scrollbar(
                 controller: _verticalController,
@@ -287,10 +297,62 @@ class _StructuredHierarchyViewState extends State<StructuredHierarchyView> {
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         );
       },
     );
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
+      final scroll = resolved as PointerScrollEvent;
+      if (HardwareKeyboard.instance.isControlPressed) {
+        _changeZoom(scroll.scrollDelta.dy > 0 ? -0.1 : 0.1);
+      } else {
+        _scrollBy(scroll.scrollDelta.dx, scroll.scrollDelta.dy);
+      }
+    });
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if ((event.buttons & kMiddleMouseButton) != 0) {
+      setState(() => _middleMousePanning = true);
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    if (_middleMousePanning && (event.buttons & kMiddleMouseButton) != 0) {
+      _scrollBy(-event.delta.dx, -event.delta.dy);
+    }
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    if (_middleMousePanning) setState(() => _middleMousePanning = false);
+  }
+
+  void _handlePointerCancel(PointerCancelEvent event) {
+    if (_middleMousePanning) setState(() => _middleMousePanning = false);
+  }
+
+  void _scrollBy(double dx, double dy) {
+    if (_horizontalController.hasClients && dx != 0) {
+      final position = _horizontalController.position;
+      _horizontalController.jumpTo(
+        (_horizontalController.offset + dx)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble(),
+      );
+    }
+    if (_verticalController.hasClients && dy != 0) {
+      final position = _verticalController.position;
+      _verticalController.jumpTo(
+        (_verticalController.offset + dy)
+            .clamp(position.minScrollExtent, position.maxScrollExtent)
+            .toDouble(),
+      );
+    }
   }
 
   void _changeZoom(double delta) {
@@ -779,7 +841,8 @@ class _StructuredCardState extends State<_StructuredCard> {
           final showDelete = interactive && width >= 365;
           final needsOverflow =
               interactive &&
-              (!showAdd ||
+              (item.isArchived ||
+                  !showAdd ||
                   !showFocus ||
                   !showEdit ||
                   !showColor ||
@@ -895,6 +958,16 @@ class _StructuredCardState extends State<_StructuredCard> {
   }) {
     final item = widget.item;
     final entries = <PopupMenuEntry<String>>[
+      if (item.isArchived)
+        const PopupMenuItem<String>(
+          value: 'unarchive',
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.unarchive_outlined),
+            title: Text('Unarchive item'),
+          ),
+        ),
+      if (item.isArchived) const PopupMenuDivider(),
       if (!showAdd)
         const PopupMenuItem<String>(
           value: 'add',
@@ -954,6 +1027,9 @@ class _StructuredCardState extends State<_StructuredCard> {
         ),
         onSelected: (value) {
           switch (value) {
+            case 'unarchive':
+              widget.controller.unarchiveWorkItem(item);
+              break;
             case 'add':
               showWorkItemEditor(context, widget.controller, parent: item);
               break;

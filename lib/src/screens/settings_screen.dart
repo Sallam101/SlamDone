@@ -309,7 +309,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(sync.status),
           const SizedBox(height: 8),
           const Text(
-            'SupeSlam saves automatically in this browser. Use the private full migration file once to bring over goals, Big Picture/Mind Map layouts, focus history, habits, journals + journal history, NorthStar, rewards, study tables, settings and timer state. Stable IDs prevent duplicates.',
+            'SlamDone saves automatically in this browser. Use the private full migration file once to bring over goals, Big Picture/Mind Map layouts, focus history, habits, journals + journal history, NorthStar, rewards, study tables, settings and timer state. Stable IDs prevent duplicates.',
           ),
           const SizedBox(height: 10),
           Wrap(

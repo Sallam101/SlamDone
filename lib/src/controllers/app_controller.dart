@@ -10,6 +10,19 @@ import '../repositories/app_repository.dart';
 import '../services/sync_service.dart';
 import '../services/timer_engine.dart';
 
+
+class AutoArchiveNotice {
+  const AutoArchiveNotice({
+    required this.itemId,
+    required this.title,
+    required this.sequence,
+  });
+
+  final String itemId;
+  final String title;
+  final int sequence;
+}
+
 class AppController extends ChangeNotifier {
   AppController({required this.database, required this.repository});
 
@@ -71,8 +84,13 @@ class AppController extends ChangeNotifier {
   List<TabPreference> tabPreferences = const [];
   List<Map<String, dynamic>> journalPrompts = const [];
   String? message;
-  bool _floatingLaunching = false;
+  bool floatingTimerVisible = false;
+  AutoArchiveNotice? autoArchiveNotice;
+  int _autoArchiveNoticeSequence = 0;
+  final Map<String, Timer> _autoArchiveTimers = <String, Timer>{};
+  final Map<String, WorkItem> _autoArchiveSnapshots = <String, WorkItem>{};
   String _lastTimerCompletionToken = '';
+  String _lastTimerAutoArchiveToken = '';
 
   DeviceClass get deviceClass {
     final platform = defaultTargetPlatform;
@@ -442,16 +460,41 @@ class AppController extends ChangeNotifier {
   void _onTimerChanged() {
     // Timer ticks are painted by widgets that listen directly to TimerEngine.
     // Avoid rebuilding the entire application four times per second.
-    final token = timerEngine.state.completionToken;
+    final state = timerEngine.state;
+    final token = state.completionToken;
     if (token.isNotEmpty && token != _lastTimerCompletionToken) {
       _lastTimerCompletionToken = token;
       unawaited(refreshSessions());
       unawaited(refreshWorkItemsAndLayouts());
     }
+
+    final workItemId = timerEngine.state.workItemId;
+    final finishedCountdown =
+        !timerEngine.isActive &&
+        state.mode != TimerMode.stopwatch &&
+        state.remainingSeconds <= 0 &&
+        workItemId != null;
+    if (finishedCountdown &&
+        token.isNotEmpty &&
+        token != _lastTimerAutoArchiveToken) {
+      _lastTimerAutoArchiveToken = token;
+      final before = itemById(workItemId);
+      if (before != null) {
+        unawaited(_refreshAfterTimerCompletion(before));
+        return;
+      }
+    }
+
     if (!timerEngine.isActive) {
       unawaited(refreshSessions());
       unawaited(refreshWorkItemsAndLayouts());
     }
+  }
+
+  Future<void> _refreshAfterTimerCompletion(WorkItem before) async {
+    await refreshSessions();
+    await refreshWorkItemsAndLayouts();
+    _scheduleAutoArchiveIfNeeded(before, itemById(before.id));
   }
 
   Future<void> _reloadRemoteState() async {
@@ -594,16 +637,26 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> updateWorkItem(WorkItem item) async {
+    final before = itemById(item.id) ?? item;
     await repository.updateWorkItem(item);
     await refreshWorkItemsAndLayouts();
+    _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
   }
 
   Future<void> setWorkItemCompleted(WorkItem item, bool value) async {
+    final before = itemById(item.id) ?? item;
+    if (!value) {
+      _cancelPendingAutoArchive(item.id);
+    }
     await repository.setWorkItemCompleted(item, value);
     await refreshWorkItemsAndLayouts();
+    if (value) {
+      _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
+    }
   }
 
   Future<void> updateChecklist(WorkItem item, int done) async {
+    final before = itemById(item.id) ?? item;
     final normalized = done.clamp(0, item.checklistTotal).toInt();
     await repository.updateWorkItem(
       item.copyWith(
@@ -616,6 +669,91 @@ class AppController extends ChangeNotifier {
             : GtdStatus.inProgress,
       ),
     );
+    await refreshWorkItemsAndLayouts();
+    final current = itemById(item.id);
+    if (current != null && current.status != WorkStatus.completed) {
+      _cancelPendingAutoArchive(item.id);
+    } else {
+      _scheduleAutoArchiveIfNeeded(before, current);
+    }
+  }
+
+  bool _canAutoArchive(WorkItem item) =>
+      item.type == WorkItemType.task && item.parentId != null;
+
+  void _scheduleAutoArchiveIfNeeded(WorkItem before, WorkItem? current) {
+    if (current == null ||
+        before.isCompleted ||
+        current.status != WorkStatus.completed ||
+        !_canAutoArchive(current)) {
+      return;
+    }
+    _autoArchiveTimers.remove(current.id)?.cancel();
+    _autoArchiveSnapshots[current.id] = before;
+    autoArchiveNotice = AutoArchiveNotice(
+      itemId: current.id,
+      title: current.title,
+      sequence: ++_autoArchiveNoticeSequence,
+    );
+    notifyListeners();
+    _autoArchiveTimers[current.id] = Timer(const Duration(seconds: 4), () {
+      unawaited(_commitPendingAutoArchive(current.id));
+    });
+  }
+
+  Future<void> _commitPendingAutoArchive(String itemId) async {
+    _autoArchiveTimers.remove(itemId)?.cancel();
+    final current = itemById(itemId);
+    if (current == null || current.status != WorkStatus.completed) {
+      _autoArchiveSnapshots.remove(itemId);
+      return;
+    }
+    await repository.updateWorkItem(
+      current.copyWith(
+        status: WorkStatus.archived,
+        gtdStatus: GtdStatus.archived,
+      ),
+    );
+    _autoArchiveSnapshots.remove(itemId);
+    await refreshWorkItemsAndLayouts();
+  }
+
+  Future<void> undoAutoArchive(String itemId) async {
+    _autoArchiveTimers.remove(itemId)?.cancel();
+    final before = _autoArchiveSnapshots.remove(itemId);
+    final current = itemById(itemId);
+    if (before == null || current == null) return;
+    await repository.updateWorkItem(
+      current.copyWith(
+        status: before.status,
+        gtdStatus: before.gtdStatus,
+        checklistDone: before.checklistDone,
+      ),
+    );
+    if (autoArchiveNotice?.itemId == itemId) {
+      autoArchiveNotice = null;
+    }
+    message = 'Completion undone: ${current.title}';
+    await refreshWorkItemsAndLayouts();
+  }
+
+  void _cancelPendingAutoArchive(String itemId) {
+    _autoArchiveTimers.remove(itemId)?.cancel();
+    _autoArchiveSnapshots.remove(itemId);
+    if (autoArchiveNotice?.itemId == itemId) {
+      autoArchiveNotice = null;
+    }
+  }
+
+  Future<void> unarchiveWorkItem(WorkItem item) async {
+    _cancelPendingAutoArchive(item.id);
+    await repository.updateWorkItem(
+      item.copyWith(
+        status: WorkStatus.completed,
+        gtdStatus: GtdStatus.completed,
+      ),
+    );
+    message = 'Unarchived: ${item.title}';
     await refreshWorkItemsAndLayouts();
   }
 
@@ -1191,13 +1329,25 @@ class AppController extends ChangeNotifier {
     return streak;
   }
 
-  Future<void> launchFloatingTimer() async {
-    message = 'SupeSlam Web uses the Focus timer inside the PWA. No EXE or separate timer window is required.';
+  Future<void> launchFloatingTimer() async => showFloatingTimer();
+
+  void showFloatingTimer() {
+    floatingTimerVisible = true;
+    message = 'Floating timer opened inside SlamDone.';
+    notifyListeners();
+  }
+
+  void hideFloatingTimer() {
+    floatingTimerVisible = false;
     notifyListeners();
   }
 
   @override
   void dispose() {
+    for (final timer in _autoArchiveTimers.values) {
+      timer.cancel();
+    }
+    _autoArchiveTimers.clear();
     syncService.removeListener(notifyListeners);
     timerEngine.removeListener(_onTimerChanged);
     syncService.dispose();

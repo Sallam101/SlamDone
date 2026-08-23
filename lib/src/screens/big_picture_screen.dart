@@ -24,12 +24,17 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
   PriorityLevel? _priorityFilter;
   String _search = '';
   bool _showDescendants = false;
+  WorkItemVisibilityFilter _visibilityFilter =
+      WorkItemVisibilityFilter.hideArchived;
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final allItems = controller.workItems
-        .where((item) => !item.isDeleted)
+        .where(
+          (item) =>
+              !item.isDeleted && item.matchesVisibilityFilter(_visibilityFilter),
+        )
         .toList();
     final query = _search.trim().toLowerCase();
     final filtered = allItems.where((item) {
@@ -136,6 +141,30 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                         selected: {_freeCanvas},
                         onSelectionChanged: (value) =>
                             setState(() => _freeCanvas = value.first),
+                      ),
+                      SizedBox(
+                        width: 178,
+                        child: DropdownButtonFormField<WorkItemVisibilityFilter>(
+                          initialValue: _visibilityFilter,
+                          isDense: true,
+                          decoration: const InputDecoration(
+                            labelText: 'State',
+                            prefixIcon: Icon(Icons.visibility_outlined, size: 18),
+                          ),
+                          items: WorkItemVisibilityFilter.values
+                              .map(
+                                (value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(_visibilityLabel(value)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _visibilityFilter = value);
+                            }
+                          },
+                        ),
                       ),
                       IconButton.filledTonal(
                         tooltip: 'Filters',
@@ -342,6 +371,16 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
       ),
     );
   }
+
+  String _visibilityLabel(WorkItemVisibilityFilter value) => switch (value) {
+    WorkItemVisibilityFilter.hideArchived => 'Active + completed',
+    WorkItemVisibilityFilter.activeOnly => 'Active only',
+    WorkItemVisibilityFilter.completedOnly => 'Completed only',
+    WorkItemVisibilityFilter.archivedOnly => 'Archived only',
+    WorkItemVisibilityFilter.completedAndArchived => 'Completed + archived',
+    WorkItemVisibilityFilter.notCompleted => 'Everything except completed',
+    WorkItemVisibilityFilter.all => 'All items',
+  };
 
   Future<void> _directParent(
     BuildContext context,

@@ -39,7 +39,7 @@ class MigrationPayload {
     }
     final root = decoded.cast<String, dynamic>();
     if (root['format'] != formatName) {
-      throw const FormatException('This is not a SupeSlam Autivra migration file.');
+      throw const FormatException('This is not a SlamDone Autivra migration file.');
     }
     final formatVersion = (root['formatVersion'] as num?)?.toInt();
     if (formatVersion != supportedFormatVersion) {

@@ -52,12 +52,12 @@ class WordExportService {
   static Future<String?> exportJournalCollection({
     required List<JournalEntry> entries,
     required List<Map<String, dynamic>> prompts,
-    String fileName = 'SupeSlam_Journal_All.docx',
+    String fileName = 'SlamDone_Journal_All.docx',
   }) async {
     final sorted = entries.where((entry) => entry.deletedAt == null).toList()
       ..sort((a, b) => a.entryDate.compareTo(b.entryDate));
     final blocks = <_DocBlock>[
-      _DocBlock.heading1('SupeSlam Journal Collection'),
+      _DocBlock.heading1('SlamDone Journal Collection'),
       _DocBlock.paragraph(
         'Exported ${DateFormat('MMMM d, yyyy - h:mm a').format(DateTime.now())}',
       ),
@@ -108,7 +108,7 @@ class WordExportService {
       archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
     }
     final combinedBlocks = <_DocBlock>[
-      _DocBlock.heading1('SupeSlam Journal Collection'),
+      _DocBlock.heading1('SlamDone Journal Collection'),
       _DocBlock.paragraph(
         'Exported ${DateFormat('MMMM d, yyyy - h:mm a').format(DateTime.now())}',
       ),
@@ -120,7 +120,7 @@ class WordExportService {
     final combinedBytes = _buildDocx(combinedBlocks);
     archive.addFile(
       ArchiveFile(
-        'SupeSlam_Journal_All.docx',
+        'SlamDone_Journal_All.docx',
         combinedBytes.length,
         combinedBytes,
       ),
@@ -128,7 +128,7 @@ class WordExportService {
     final zipBytes = Uint8List.fromList(ZipEncoder().encodeBytes(archive));
     final path = await FilePicker.saveFile(
       dialogTitle: 'Export all journal Word files',
-      fileName: 'SupeSlam_Journal_Word_Files.zip',
+      fileName: 'SlamDone_Journal_Word_Files.zip',
       type: FileType.custom,
       allowedExtensions: const ['zip'],
       bytes: zipBytes,
@@ -177,7 +177,7 @@ class WordExportService {
     List<NorthStarNote> notes,
   ) async {
     final blocks = <_DocBlock>[
-      _DocBlock.heading1('SupeSlam NorthStar'),
+      _DocBlock.heading1('SlamDone NorthStar'),
       _DocBlock.paragraph(
         'Exported ${DateFormat('MMMM d, yyyy - h:mm a').format(DateTime.now())}',
       ),
@@ -194,7 +194,7 @@ class WordExportService {
       );
     }
     return _saveDocx(
-      fileName: 'SupeSlam_NorthStar_Export.docx',
+      fileName: 'SlamDone_NorthStar_Export.docx',
       blocks: blocks,
     );
   }
