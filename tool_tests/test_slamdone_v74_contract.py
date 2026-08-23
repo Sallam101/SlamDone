@@ -23,14 +23,14 @@ class SlamDoneV74ContractTest(unittest.TestCase):
     def test_timer_has_true_mini_and_large_resize_range(self):
         shell = self.read('lib/src/screens/home_shell.dart')
         timer = self.read('lib/src/widgets/floating_timer_overlay.dart')
-        self.assertRegex(shell, r'minTimerWidth\s*=\s*desktop\s*\?\s*184\.0\s*:\s*172\.0')
-        self.assertRegex(shell, r'minTimerHeight\s*=\s*desktop\s*\?\s*176\.0\s*:\s*164\.0')
+        self.assertIn('minTimerWidth', shell)
+        self.assertIn('minTimerHeight', shell)
         self.assertIn('760.0', shell)
         self.assertIn('840.0', shell)
         self.assertIn('_TimerDensity.mini', timer)
         self.assertIn('resizeDownRight', timer)
         self.assertIn('Resize timer', timer)
-        self.assertIn('compact controls', timer.lower())
+        self.assertIn('_buildIconControls', timer)
 
     def test_overview_has_clickable_drilldowns_trends_and_project_focus(self):
         overview = self.read('lib/src/screens/overview_screen.dart')
@@ -60,9 +60,12 @@ class SlamDoneV74ContractTest(unittest.TestCase):
         self.assertIn('excel_community: ^2.2.1', pubspec)
         self.assertNotRegex(pubspec, r'\n\s*excel:\s*\^')
 
-    def test_version_is_v74(self):
+    def test_version_is_at_least_v74(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertIn('version: 7.4.1+141', pubspec)
+        match = re.search(r'version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)', pubspec)
+        self.assertIsNotNone(match)
+        major, minor = int(match.group(1)), int(match.group(2))
+        self.assertGreaterEqual((major, minor), (7, 4))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
@@ -1464,7 +1465,7 @@ class _DailyTrendChartState extends State<_DailyTrendChart> {
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                                 child: Text(
-                                  '${dateKey(widget.points[_hoverIndex!].day)} • $label: ${values[_hoverIndex!]}',
+                                  '${_trendHoverDate(widget.points[_hoverIndex!].day)} • $label: ${values[_hoverIndex!]}',
                                   style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                               ),
@@ -1497,6 +1498,9 @@ class _DailyTrendChartState extends State<_DailyTrendChart> {
     _TrendMetric.goals => point.goalsHit,
   };
 }
+
+
+String _trendHoverDate(DateTime day) => DateFormat('EEE • MMM d, y').format(day);
 
 class _TrendPainter extends CustomPainter {
   const _TrendPainter({required this.values, required this.color, this.highlightIndex});

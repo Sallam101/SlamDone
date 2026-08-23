@@ -9,6 +9,7 @@ import '../services/timer_engine.dart';
 import 'slamdone_brand.dart';
 
 enum _TimerDensity { mini, compact, regular, spacious }
+enum _TimerResizeAxis { horizontal, vertical, both }
 
 class SlamDoneFloatingTimerOverlay extends StatefulWidget {
   const SlamDoneFloatingTimerOverlay({
@@ -18,6 +19,8 @@ class SlamDoneFloatingTimerOverlay extends StatefulWidget {
     required this.onDragDelta,
     required this.onResizeDelta,
     required this.size,
+    required this.pinned,
+    required this.onPinnedChanged,
     this.compact = false,
   });
 
@@ -26,6 +29,8 @@ class SlamDoneFloatingTimerOverlay extends StatefulWidget {
   final ValueChanged<Offset> onDragDelta;
   final ValueChanged<Offset> onResizeDelta;
   final Size size;
+  final bool pinned;
+  final ValueChanged<bool> onPinnedChanged;
   final bool compact;
 
   @override
@@ -51,9 +56,9 @@ class _SlamDoneFloatingTimerOverlayState
   _TimerDensity get _density {
     final w = widget.size.width;
     final h = widget.size.height;
-    if (w < 224 || h < 214) return _TimerDensity.mini;
-    if (w < 310 || h < 330) return _TimerDensity.compact;
-    if (w > 470 && h > 470) return _TimerDensity.spacious;
+    if (w < 205 || h < 190) return _TimerDensity.mini;
+    if (w < 285 || h < 285) return _TimerDensity.compact;
+    if (w > 500 && h > 500) return _TimerDensity.spacious;
     return _TimerDensity.regular;
   }
 
@@ -62,7 +67,7 @@ class _SlamDoneFloatingTimerOverlayState
     final engine = widget.controller.timerEngine;
     final accent = _timerColors[_colorIndex % _timerColors.length];
     final density = _density;
-    final radius = density == _TimerDensity.mini ? 12.0 : 20.0;
+    final radius = density == _TimerDensity.mini ? 10.0 : 16.0;
 
     return Material(
       elevation: 18,
@@ -85,33 +90,79 @@ class _SlamDoneFloatingTimerOverlayState
                 ),
               ),
             ),
-            // Large transparent hit target makes diagonal resizing smooth even
-            // when the timer is in its tiny compact controls layout.
+            // Edge handles avoid forcing the pointer into one tiny corner and
+            // feel much smoother on mouse/trackpad than a single drag target.
+            Positioned(
+              right: 0,
+              top: density == _TimerDensity.mini ? 28 : 32,
+              bottom: 22,
+              width: 10,
+              child: _resizeHandle(
+                axis: _TimerResizeAxis.horizontal,
+                accent: accent,
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 22,
+              bottom: 0,
+              height: 10,
+              child: _resizeHandle(
+                axis: _TimerResizeAxis.vertical,
+                accent: accent,
+              ),
+            ),
             Positioned(
               right: 0,
               bottom: 0,
-              width: 34,
-              height: 34,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeDownRight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onPanUpdate: (details) => widget.onResizeDelta(details.delta),
-                  child: Tooltip(
-                    message: 'Resize timer',
-                    child: Align(
-                      alignment: Alignment.bottomRight,
-                      child: CustomPaint(
-                        size: const Size.square(30),
-                        painter: _ResizeGripPainter(accent),
-                      ),
-                    ),
-                  ),
-                ),
+              width: 30,
+              height: 30,
+              child: _resizeHandle(
+                axis: _TimerResizeAxis.both,
+                accent: accent,
+                showGrip: true,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _resizeHandle({
+    required _TimerResizeAxis axis,
+    required Color accent,
+    bool showGrip = false,
+  }) {
+    final cursor = switch (axis) {
+      _TimerResizeAxis.horizontal => SystemMouseCursors.resizeLeftRight,
+      _TimerResizeAxis.vertical => SystemMouseCursors.resizeUpDown,
+      _TimerResizeAxis.both => SystemMouseCursors.resizeDownRight,
+    };
+    return MouseRegion(
+      cursor: cursor,
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerMove: (event) {
+          final delta = switch (axis) {
+            _TimerResizeAxis.horizontal => Offset(event.delta.dx, 0),
+            _TimerResizeAxis.vertical => Offset(0, event.delta.dy),
+            _TimerResizeAxis.both => event.delta,
+          };
+          widget.onResizeDelta(delta);
+        },
+        child: showGrip
+            ? Tooltip(
+                message: 'Resize timer',
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: CustomPaint(
+                    size: const Size.square(28),
+                    painter: _ResizeGripPainter(accent),
+                  ),
+                ),
+              )
+            : const SizedBox.expand(),
       ),
     );
   }
@@ -129,36 +180,33 @@ class _SlamDoneFloatingTimerOverlayState
     final progress = state.mode == TimerMode.stopwatch
         ? 0.0
         : engine.progress.clamp(0, 1).toDouble();
+    final title = state.title.trim().isEmpty ? 'General focus' : state.title.trim();
 
     return Column(
       children: [
-        _buildHeader(context, accent: accent, density: density, title: state.title),
+        _buildHeader(
+          context,
+          accent: accent,
+          density: density,
+          title: title,
+        ),
         Expanded(
-          child: density == _TimerDensity.mini
-              ? _buildMiniBody(
-                  context,
-                  engine: engine,
-                  accent: accent,
-                  displaySeconds: displaySeconds,
-                  progress: progress,
-                )
-              : SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    density == _TimerDensity.compact ? 10 : 16,
-                    density == _TimerDensity.compact ? 8 : 12,
-                    density == _TimerDensity.compact ? 10 : 16,
-                    28,
-                  ),
-                  child: _buildFullBody(
-                    context,
-                    engine: engine,
-                    accent: accent,
-                    density: density,
-                    displaySeconds: displaySeconds,
-                    progress: progress,
-                  ),
-                ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              density == _TimerDensity.mini ? 5 : 8,
+              density == _TimerDensity.mini ? 3 : 6,
+              density == _TimerDensity.mini ? 5 : 8,
+              density == _TimerDensity.mini ? 7 : 10,
+            ),
+            child: _buildClockFirstBody(
+              context,
+              engine: engine,
+              accent: accent,
+              density: density,
+              displaySeconds: displaySeconds,
+              progress: progress,
+            ),
+          ),
         ),
       ],
     );
@@ -171,54 +219,49 @@ class _SlamDoneFloatingTimerOverlayState
     required String title,
   }) {
     final mini = density == _TimerDensity.mini;
+    final utilitySize = mini ? 24.0 : 26.0;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onPanUpdate: (details) => widget.onDragDelta(details.delta),
       child: MouseRegion(
         cursor: SystemMouseCursors.move,
         child: Container(
-          height: mini ? 38 : (density == _TimerDensity.compact ? 48 : 58),
-          padding: EdgeInsets.fromLTRB(mini ? 8 : 10, 5, 4, 5),
-          color: accent.withValues(alpha: .12),
+          height: mini ? 28 : 32,
+          padding: EdgeInsets.fromLTRB(mini ? 7 : 9, 2, 2, 2),
+          color: accent.withValues(alpha: .10),
           child: Row(
             children: [
-              SlamDoneMark(size: mini ? 22 : 27),
-              const SizedBox(width: 6),
               Expanded(
-                child: mini
-                    ? Text(
-                        'SlamDone',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'SlamDone Timer',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                ),
-                          ),
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        height: 1,
                       ),
+                ),
               ),
-              if (!mini)
-                PopupMenuButton<int>(
+              IconButton(
+                tooltip: widget.pinned ? 'Unpin timer' : 'Pin timer',
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                constraints: BoxConstraints.tightFor(
+                  width: utilitySize,
+                  height: utilitySize,
+                ),
+                onPressed: () => widget.onPinnedChanged(!widget.pinned),
+                icon: Icon(
+                  widget.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  size: mini ? 15 : 16,
+                ),
+              ),
+              SizedBox(
+                width: utilitySize,
+                height: utilitySize,
+                child: PopupMenuButton<int>(
                   tooltip: 'Timer color',
-                  iconSize: 19,
+                  iconSize: mini ? 15 : 16,
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.palette_outlined),
                   onSelected: (value) => setState(() => _colorIndex = value),
@@ -229,30 +272,31 @@ class _SlamDoneFloatingTimerOverlayState
                       child: Row(
                         children: [
                           Container(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             decoration: BoxDecoration(
                               color: _timerColors[index],
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Text(index == 0 ? 'SlamDone green' : 'Color ${index + 1}'),
                         ],
                       ),
                     ),
                   ),
                 ),
+              ),
               IconButton(
                 tooltip: 'Close floating timer',
-                visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
                 constraints: BoxConstraints.tightFor(
-                  width: mini ? 30 : 34,
-                  height: mini ? 30 : 34,
+                  width: utilitySize,
+                  height: utilitySize,
                 ),
                 onPressed: widget.onClose,
-                icon: Icon(Icons.close, size: mini ? 18 : 20),
+                icon: Icon(Icons.close, size: mini ? 16 : 17),
               ),
             ],
           ),
@@ -261,89 +305,131 @@ class _SlamDoneFloatingTimerOverlayState
     );
   }
 
-  Widget _buildMiniBody(
+  Widget _buildClockFirstBody(
     BuildContext context, {
     required TimerEngine engine,
     required Color accent,
+    required _TimerDensity density,
     required int displaySeconds,
     required double progress,
   }) {
     final state = engine.state;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              engine.formatSeconds(displaySeconds),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 31,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mini = density == _TimerDensity.mini;
+        final compactControls =
+            density == _TimerDensity.mini ||
+            density == _TimerDensity.compact ||
+            constraints.maxWidth < 285;
+        const controlHeight = 30.0;
+        final dialMax = switch (density) {
+          _TimerDensity.mini => 92.0,
+          _TimerDensity.compact => 150.0,
+          _TimerDensity.regular => 270.0,
+          _TimerDensity.spacious => 480.0,
+        };
+        final available = math.min(
+          constraints.maxWidth - (mini ? 4 : 10),
+          constraints.maxHeight - controlHeight - (mini ? 4 : 8),
+        );
+        final dialSize = available.clamp(58.0, dialMax).toDouble();
+        final timeSize = (dialSize * .28).clamp(19.0, 54.0).toDouble();
+
+        return Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SizedBox.square(
+                  dimension: dialSize,
+                  child: CustomPaint(
+                    painter: _TimerDialPainter(
+                      progress: progress,
+                      accent: accent,
+                      stopwatch: state.mode == TimerMode.stopwatch,
+                      elapsedSeconds: state.elapsedSeconds,
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              engine.formatSeconds(displaySeconds),
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    fontSize: timeSize,
+                                    fontWeight: FontWeight.w900,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                    height: .95,
+                                  ),
+                            ),
+                          ),
+                          if (dialSize >= 72)
+                            Text(
+                              state.mode == TimerMode.stopwatch
+                                  ? 'STOPWATCH'
+                                  : state.mode.name.toUpperCase(),
+                              maxLines: 1,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: accent,
+                                    fontSize: (dialSize * .075).clamp(8.0, 12.0),
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: .7,
+                                  ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-            ),
-          ),
-          Text(
-            state.mode == TimerMode.stopwatch
-                ? 'STOPWATCH'
-                : state.mode.name.toUpperCase(),
-            maxLines: 1,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: .8,
-                ),
-          ),
-          const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: state.mode == TimerMode.stopwatch ? null : progress,
-              minHeight: 5,
-              color: accent,
-              backgroundColor: accent.withValues(alpha: .14),
-            ),
-          ),
-          const SizedBox(height: 7),
-          // Compact controls intentionally use icons so the panel can shrink to
-          // a true mini timer instead of clipping large text buttons.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _miniAction(
-                tooltip: _primaryLabel(engine),
-                icon: _primaryIcon(engine),
-                color: accent,
-                filled: true,
-                onPressed: () => _primaryAction(engine),
-              ),
-              _miniAction(
-                tooltip: 'Reset',
-                icon: Icons.restart_alt,
-                color: accent,
-                onPressed: engine.reset,
-              ),
-              _miniAction(
-                tooltip: 'Log & stop',
-                icon: Icons.stop_circle_outlined,
-                color: accent,
-                onPressed: () => engine.stop(saveSession: true),
-              ),
-              _miniAction(
-                tooltip: 'Stopwatch',
-                icon: Icons.hourglass_bottom,
-                color: accent,
-                onPressed: () => engine.start(
-                  mode: TimerMode.stopwatch,
-                  title: 'Study stopwatch',
                 ),
               ),
-            ],
+            ),
+            SizedBox(height: mini ? 2 : 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints.tightFor(height: 30),
+              child: compactControls
+                  ? _buildIconControls(engine, accent)
+                  : _buildSmallLabelControls(engine, accent),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildIconControls(TimerEngine engine, Color accent) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _miniAction(
+          tooltip: _primaryLabel(engine),
+          icon: _primaryIcon(engine),
+          color: accent,
+          filled: true,
+          onPressed: () => _primaryAction(engine),
+        ),
+        _miniAction(
+          tooltip: 'Reset',
+          icon: Icons.restart_alt,
+          color: accent,
+          onPressed: engine.reset,
+        ),
+        _miniAction(
+          tooltip: 'Stop & log',
+          icon: Icons.stop_circle_outlined,
+          color: accent,
+          onPressed: () => engine.stop(saveSession: true),
+        ),
+        _miniAction(
+          tooltip: 'Stopwatch',
+          icon: Icons.hourglass_bottom,
+          color: accent,
+          onPressed: () => engine.start(
+            mode: TimerMode.stopwatch,
+            title: 'Study stopwatch',
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -355,11 +441,13 @@ class _SlamDoneFloatingTimerOverlayState
     bool filled = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 1.5),
       child: Tooltip(
         message: tooltip,
         child: IconButton(
           visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 28, height: 28),
           style: filled
               ? IconButton.styleFrom(
                   backgroundColor: color,
@@ -367,117 +455,85 @@ class _SlamDoneFloatingTimerOverlayState
                 )
               : null,
           onPressed: onPressed,
-          icon: Icon(icon, size: 19),
+          icon: Icon(icon, size: 17),
         ),
       ),
     );
   }
 
-  Widget _buildFullBody(
-    BuildContext context, {
-    required TimerEngine engine,
-    required Color accent,
-    required _TimerDensity density,
-    required int displaySeconds,
-    required double progress,
-  }) {
-    final state = engine.state;
-    final availableDial = math.min(
-      widget.size.width - (density == _TimerDensity.compact ? 40 : 76),
-      widget.size.height - (density == _TimerDensity.spacious ? 210 : 180),
-    );
-    final dialMin = density == _TimerDensity.compact ? 84.0 : 112.0;
-    final dialMax = density == _TimerDensity.spacious ? 300.0 : 205.0;
-    final dialSize = availableDial.clamp(dialMin, dialMax).toDouble();
-
-    return Column(
-      children: [
-        SizedBox(
-          width: dialSize,
-          height: dialSize,
-          child: CustomPaint(
-            painter: _TimerDialPainter(
-              progress: progress,
-              accent: accent,
-              stopwatch: state.mode == TimerMode.stopwatch,
-              elapsedSeconds: state.elapsedSeconds,
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      engine.formatSeconds(displaySeconds),
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontSize: density == _TimerDensity.spacious ? 46 : null,
-                            fontWeight: FontWeight.w900,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    state.mode == TimerMode.stopwatch
-                        ? 'STOPWATCH'
-                        : state.mode.name.toUpperCase(),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: accent,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: .8,
-                        ),
-                  ),
-                ],
-              ),
+  Widget _buildSmallLabelControls(TimerEngine engine, Color accent) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _smallAction(
+            label: _primaryLabel(engine),
+            icon: _primaryIcon(engine),
+            accent: accent,
+            filled: true,
+            onPressed: () => _primaryAction(engine),
+          ),
+          _smallAction(
+            label: 'Reset',
+            icon: Icons.restart_alt,
+            accent: accent,
+            onPressed: engine.reset,
+          ),
+          _smallAction(
+            label: 'Stop',
+            icon: Icons.stop_circle_outlined,
+            accent: accent,
+            onPressed: () => engine.stop(saveSession: true),
+          ),
+          _smallAction(
+            label: 'Stopwatch',
+            icon: Icons.hourglass_bottom,
+            accent: accent,
+            onPressed: () => engine.start(
+              mode: TimerMode.stopwatch,
+              title: 'Study stopwatch',
             ),
           ),
-        ),
-        SizedBox(height: density == _TimerDensity.compact ? 7 : 12),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: density == _TimerDensity.compact ? 5 : 8,
-          runSpacing: density == _TimerDensity.compact ? 5 : 8,
-          children: [
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                visualDensity: density == _TimerDensity.compact
-                    ? VisualDensity.compact
-                    : null,
-              ),
-              onPressed: () => _primaryAction(engine),
-              icon: Icon(_primaryIcon(engine)),
-              label: Text(_primaryLabel(engine)),
-            ),
-            OutlinedButton.icon(
-              style: density == _TimerDensity.compact
-                  ? OutlinedButton.styleFrom(visualDensity: VisualDensity.compact)
-                  : null,
-              onPressed: engine.reset,
-              icon: const Icon(Icons.restart_alt),
-              label: const Text('Reset'),
-            ),
-            OutlinedButton.icon(
-              style: density == _TimerDensity.compact
-                  ? OutlinedButton.styleFrom(visualDensity: VisualDensity.compact)
-                  : null,
-              onPressed: () => engine.stop(saveSession: true),
-              icon: const Icon(Icons.stop_circle_outlined),
-              label: Text(density == _TimerDensity.compact ? 'Stop' : 'Log & stop'),
-            ),
-            if (density != _TimerDensity.compact)
-              TextButton.icon(
-                onPressed: () => engine.start(
-                  mode: TimerMode.stopwatch,
-                  title: 'Study stopwatch',
-                ),
-                icon: const Icon(Icons.hourglass_bottom),
-                label: const Text('Stopwatch'),
-              ),
-          ],
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _smallAction({
+    required String label,
+    required IconData icon,
+    required Color accent,
+    required VoidCallback onPressed,
+    bool filled = false,
+  }) {
+    final style = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, 28)),
+      maximumSize: const WidgetStatePropertyAll(Size(double.infinity, 28)),
+      visualDensity: VisualDensity.compact,
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 7, vertical: 0),
+      ),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      backgroundColor: filled ? WidgetStatePropertyAll(accent) : null,
+      foregroundColor: filled ? const WidgetStatePropertyAll(Colors.white) : null,
+    );
+    final button = filled
+        ? FilledButton.icon(
+            style: style,
+            onPressed: onPressed,
+            icon: Icon(icon, size: 14),
+            label: Text(label, style: const TextStyle(fontSize: 11)),
+          )
+        : TextButton.icon(
+            style: style,
+            onPressed: onPressed,
+            icon: Icon(icon, size: 14),
+            label: Text(label, style: const TextStyle(fontSize: 11)),
+          );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: button,
     );
   }
 
@@ -505,7 +561,6 @@ class _SlamDoneFloatingTimerOverlayState
     }
   }
 }
-
 class _ResizeGripPainter extends CustomPainter {
   const _ResizeGripPainter(this.color);
   final Color color;

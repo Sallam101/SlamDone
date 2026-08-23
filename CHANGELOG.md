@@ -1,3 +1,14 @@
+# SlamDone Changelog
+
+## V7.5.0 — 2026-08-23
+
+- Floating timer is now clock-first with a thin task-title strip, smaller controls, true pin/unpin behavior, smaller minimum size, and right/bottom/corner resize targets.
+- Unpinned timers belong to the current planner page and move with vertical page scrolling; pinned timers remain fixed over SlamDone.
+- Browser/PWA icon now uses the exact approved S/check icon supplied for SlamDone branding.
+- In-app SlamDone wordmark chooses black/white “Slam” ink from the actual surface brightness so theme colors cannot wash it out.
+- Overview trend hover labels now include weekday, calendar date, metric name, and value.
+- NorthStar notes now have a dedicated move grip and larger right/bottom/corner resize zones with scale-correct pointer movement.
+
 ## 7.4.1 - 2026-08-23
 
 - Fixed GitHub Actions dependency resolution by replacing the unpublished `excel ^5.0.0` package reference with published `excel_community ^2.2.1`.

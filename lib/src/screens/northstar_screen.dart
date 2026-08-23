@@ -793,6 +793,8 @@ class _NorthStarScreenState extends State<NorthStarScreen> {
   }
 }
 
+enum _NorthStarResizeAxis { horizontal, vertical, both }
+
 class _MovableNote extends StatefulWidget {
   const _MovableNote({
     super.key,
@@ -849,6 +851,62 @@ class _MovableNoteState extends State<_MovableNote> {
       width = widget.note.width;
       height = widget.note.height;
     }
+  }
+
+  Widget _resizeZone({
+    required _NorthStarResizeAxis axis,
+    required Color textColor,
+    bool showGrip = false,
+  }) {
+    final cursor = switch (axis) {
+      _NorthStarResizeAxis.horizontal => SystemMouseCursors.resizeLeftRight,
+      _NorthStarResizeAxis.vertical => SystemMouseCursors.resizeUpDown,
+      _NorthStarResizeAxis.both => SystemMouseCursors.resizeDownRight,
+    };
+    return MouseRegion(
+      cursor: cursor,
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          _resizedDuringPointer = false;
+          widget.onSelect();
+          widget.onManipulationChanged(true);
+        },
+        onPointerMove: (event) {
+          final scale = widget.currentCanvasScale();
+          _resizedDuringPointer = true;
+          setState(() {
+            if (axis == _NorthStarResizeAxis.horizontal ||
+                axis == _NorthStarResizeAxis.both) {
+              width = (width + event.delta.dx / scale).clamp(200, 960).toDouble();
+            }
+            if (axis == _NorthStarResizeAxis.vertical ||
+                axis == _NorthStarResizeAxis.both) {
+              height = (height + event.delta.dy / scale).clamp(140, 820).toDouble();
+            }
+          });
+        },
+        onPointerUp: (_) {
+          widget.onManipulationChanged(false);
+          if (_resizedDuringPointer) {
+            AppScope.of(context).updateNorthStarNote(
+              widget.note.copyWith(width: width, height: height),
+            );
+          }
+        },
+        onPointerCancel: (_) => widget.onManipulationChanged(false),
+        child: showGrip
+            ? Align(
+                alignment: Alignment.bottomRight,
+                child: Icon(
+                  Icons.drag_handle,
+                  color: textColor.withValues(alpha: .85),
+                  size: widget.selected ? 20 : 17,
+                ),
+              )
+            : const SizedBox.expand(),
+      ),
+    );
   }
 
   @override
@@ -916,78 +974,70 @@ class _MovableNoteState extends State<_MovableNote> {
                             height: headerHeight,
                             child: Row(
                               children: [
-                                Expanded(
+                                Tooltip(
+                                  message: 'Drag to move note',
                                   child: MouseRegion(
                                     cursor: SystemMouseCursors.move,
-                                    child: Tooltip(
-                                      message:
-                                          'Drag this title area to move. Double-click to edit.',
-                                      child: Listener(
-                                        behavior: HitTestBehavior.opaque,
-                                        onPointerDown: (_) {
-                                          _movedDuringPointer = false;
-                                          widget.onSelect();
-                                          widget.onManipulationChanged(true);
-                                        },
-                                        onPointerMove: (event) {
-                                          final scale = widget
-                                              .currentCanvasScale();
-                                          _movedDuringPointer = true;
-                                          setState(() {
-                                            x += event.delta.dx / scale;
-                                            y += event.delta.dy / scale;
-                                          });
-                                        },
-                                        onPointerUp: (_) {
-                                          widget.onManipulationChanged(false);
-                                          if (_movedDuringPointer) {
-                                            controller.updateNorthStarNote(
-                                              widget.note.copyWith(x: x, y: y),
-                                            );
-                                          }
-                                        },
-                                        onPointerCancel: (_) =>
-                                            widget.onManipulationChanged(false),
-                                        child: GestureDetector(
-                                          behavior: HitTestBehavior.opaque,
-                                          onDoubleTap: widget.onEdit,
-                                          child: Row(
-                                            children: [
-                                              SizedBox(
-                                                width: 34,
-                                                height: 34,
-                                                child: Icon(
-                                                  Icons.open_with,
-                                                  size: compact ? 17 : 20,
-                                                  color: textColor,
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Text(
-                                                  widget.note.title,
-                                                  maxLines: compact ? 1 : 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  softWrap: true,
-                                                  style: TextStyle(
-                                                    color: textColor,
-                                                    fontWeight:
-                                                        FontWeight
-                                                            .values[((widget
-                                                                            .note
-                                                                            .fontWeightValue /
-                                                                        100)
-                                                                    .round() -
-                                                                1)
-                                                            .clamp(0, 8)
-                                                            .toInt()],
-                                                    fontSize: titleSize,
-                                                    height: 1.05,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                    child: Listener(
+                                      behavior: HitTestBehavior.opaque,
+                                      onPointerDown: (_) {
+                                        _movedDuringPointer = false;
+                                        widget.onSelect();
+                                        widget.onManipulationChanged(true);
+                                      },
+                                      onPointerMove: (event) {
+                                        final scale = widget.currentCanvasScale();
+                                        _movedDuringPointer = true;
+                                        setState(() {
+                                          x += event.delta.dx / scale;
+                                          y += event.delta.dy / scale;
+                                        });
+                                      },
+                                      onPointerUp: (_) {
+                                        widget.onManipulationChanged(false);
+                                        if (_movedDuringPointer) {
+                                          controller.updateNorthStarNote(
+                                            widget.note.copyWith(x: x, y: y),
+                                          );
+                                        }
+                                      },
+                                      onPointerCancel: (_) =>
+                                          widget.onManipulationChanged(false),
+                                      child: SizedBox(
+                                        width: compact ? 30 : 36,
+                                        height: headerHeight,
+                                        child: Icon(
+                                          Icons.open_with,
+                                          size: compact ? 17 : 20,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: widget.onSelect,
+                                    onDoubleTap: widget.onEdit,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        widget.note.title,
+                                        maxLines: compact ? 1 : 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        softWrap: true,
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontWeight: FontWeight
+                                              .values[((widget.note.fontWeightValue / 100)
+                                                          .round() -
+                                                      1)
+                                                  .clamp(0, 8)
+                                                  .toInt()],
+                                          fontSize: titleSize,
+                                          height: 1.05,
                                         ),
                                       ),
                                     ),
@@ -1162,52 +1212,33 @@ class _MovableNoteState extends State<_MovableNote> {
                   ),
                   Positioned(
                     right: 0,
+                    top: headerHeight + 4,
+                    bottom: 24,
+                    width: widget.selected ? 16 : 12,
+                    child: _resizeZone(
+                      axis: _NorthStarResizeAxis.horizontal,
+                      textColor: textColor,
+                    ),
+                  ),
+                  Positioned(
+                    left: 8,
+                    right: 24,
                     bottom: 0,
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.resizeDownRight,
-                      child: Listener(
-                        behavior: HitTestBehavior.opaque,
-                        onPointerDown: (_) {
-                          _resizedDuringPointer = false;
-                          widget.onSelect();
-                          widget.onManipulationChanged(true);
-                        },
-                        onPointerMove: (event) {
-                          final scale = widget.currentCanvasScale();
-                          _resizedDuringPointer = true;
-                          setState(() {
-                            width = (width + event.delta.dx / scale)
-                                .clamp(220, 900)
-                                .toDouble();
-                            height = (height + event.delta.dy / scale)
-                                .clamp(160, 760)
-                                .toDouble();
-                          });
-                        },
-                        onPointerUp: (_) {
-                          widget.onManipulationChanged(false);
-                          if (_resizedDuringPointer) {
-                            controller.updateNorthStarNote(
-                              widget.note.copyWith(
-                                width: width,
-                                height: height,
-                              ),
-                            );
-                          }
-                        },
-                        onPointerCancel: (_) =>
-                            widget.onManipulationChanged(false),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          alignment: Alignment.bottomRight,
-                          child: Icon(
-                            Icons.drag_handle,
-                            color: textColor,
-                            size: 18,
-                          ),
-                        ),
-                      ),
+                    height: widget.selected ? 16 : 12,
+                    child: _resizeZone(
+                      axis: _NorthStarResizeAxis.vertical,
+                      textColor: textColor,
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    width: widget.selected ? 36 : 30,
+                    height: widget.selected ? 36 : 30,
+                    child: _resizeZone(
+                      axis: _NorthStarResizeAxis.both,
+                      textColor: textColor,
+                      showGrip: true,
                     ),
                   ),
                 ],

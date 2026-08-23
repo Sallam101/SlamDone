@@ -9,11 +9,13 @@ class SlamDoneBrand extends StatelessWidget {
     this.compact = false,
     this.showSlogan = true,
     this.inverse = false,
+    this.backgroundColor,
   });
 
   final bool compact;
   final bool showSlogan;
   final bool inverse;
+  final Color? backgroundColor;
 
   static const slogan = 'STOP PLANNING. START FINISHING.';
   static const brandGreen = Color(0xFF78D12F);
@@ -21,7 +23,8 @@ class SlamDoneBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+    final effectiveBackground = backgroundColor ?? Theme.of(context).colorScheme.surface;
+    final brightness = ThemeData.estimateBrightnessForColor(effectiveBackground);
     final lightInk = inverse || brightness == Brightness.dark;
     final slamColor = lightInk ? Colors.white : brandBlack;
     final markSize = compact ? 29.0 : 38.0;

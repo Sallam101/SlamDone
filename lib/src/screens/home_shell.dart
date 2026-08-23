@@ -33,7 +33,10 @@ class _HomeShellState extends State<HomeShell> {
   late final List<Widget> _screens;
   int _lastAutoArchiveSequence = 0;
   Offset _floatingTimerOffset = const Offset(18, 18);
-  Size _floatingTimerSize = const Size(238, 236);
+  Size _floatingTimerSize = const Size(218, 214);
+  bool _floatingTimerPinned = true;
+  AppSection? _floatingTimerUnpinnedSection;
+  final ValueNotifier<double> _floatingTimerPageScroll = ValueNotifier<double>(0);
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     _tabScrollController.dispose();
+    _floatingTimerPageScroll.dispose();
     super.dispose();
   }
 
@@ -73,6 +77,8 @@ class _HomeShellState extends State<HomeShell> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final desktop = constraints.maxWidth >= 780;
+        final appBarBackground = Theme.of(context).appBarTheme.backgroundColor ??
+            Theme.of(context).colorScheme.surface;
         final mobileSections = <AppSection>[
           AppSection.doFirst,
           AppSection.focus,
@@ -97,6 +103,7 @@ class _HomeShellState extends State<HomeShell> {
                   child: SlamDoneBrand(
                     compact: !desktop,
                     showSlogan: desktop,
+                    backgroundColor: appBarBackground,
                   ),
                 ),
                 if (desktop && controller.message != null) ...[
@@ -243,8 +250,8 @@ class _HomeShellState extends State<HomeShell> {
                 ),
           body: LayoutBuilder(
             builder: (context, bodyConstraints) {
-              final minTimerWidth = desktop ? 184.0 : 172.0;
-              final minTimerHeight = desktop ? 176.0 : 164.0;
+              final minTimerWidth = desktop ? 156.0 : 148.0;
+              final minTimerHeight = desktop ? 150.0 : 144.0;
               final maxTimerWidth = (bodyConstraints.maxWidth - 16)
                   .clamp(minTimerWidth, 760.0)
                   .toDouble();
@@ -263,45 +270,83 @@ class _HomeShellState extends State<HomeShell> {
                   .toDouble();
               final left = _floatingTimerOffset.dx.clamp(0.0, maxLeft).toDouble();
               final top = _floatingTimerOffset.dy.clamp(0.0, maxTop).toDouble();
+              final timerBelongsToCurrentPage = _floatingTimerPinned ||
+                  _floatingTimerUnpinnedSection == controller.selectedSection;
               return Stack(
-                clipBehavior: Clip.none,
+                clipBehavior: Clip.hardEdge,
                 children: [
                   Positioned.fill(
-                    child: IndexedStack(index: bodyIndex, children: _screens),
+                    child: NotificationListener<ScrollUpdateNotification>(
+                      onNotification: (notification) {
+                        if (!_floatingTimerPinned &&
+                            _floatingTimerUnpinnedSection == controller.selectedSection &&
+                            notification.metrics.axis == Axis.vertical &&
+                            notification.scrollDelta != null) {
+                          _floatingTimerPageScroll.value += notification.scrollDelta!;
+                        }
+                        return false;
+                      },
+                      child: IndexedStack(index: bodyIndex, children: _screens),
+                    ),
                   ),
-                  if (controller.floatingTimerVisible)
+                  if (controller.floatingTimerVisible && timerBelongsToCurrentPage)
                     Positioned(
                       left: left,
                       top: top,
-                      child: SlamDoneFloatingTimerOverlay(
-                        controller: controller,
-                        compact: !desktop,
-                        size: timerSize,
-                        onClose: controller.hideFloatingTimer,
-                        onResizeDelta: (delta) {
-                          setState(() {
-                            _floatingTimerSize = Size(
-                              (timerSize.width + delta.dx)
-                                  .clamp(minTimerWidth, maxTimerWidth)
-                                  .toDouble(),
-                              (timerSize.height + delta.dy)
-                                  .clamp(minTimerHeight, maxTimerHeight)
-                                  .toDouble(),
-                            );
-                          });
-                        },
-                        onDragDelta: (delta) {
-                          setState(() {
-                            _floatingTimerOffset = Offset(
-                              (_floatingTimerOffset.dx + delta.dx)
-                                  .clamp(0.0, maxLeft)
-                                  .toDouble(),
-                              (_floatingTimerOffset.dy + delta.dy)
-                                  .clamp(0.0, maxTop)
-                                  .toDouble(),
-                            );
-                          });
-                        },
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _floatingTimerPageScroll,
+                        builder: (context, pageScroll, child) => Transform.translate(
+                          offset: Offset(0, _floatingTimerPinned ? 0 : -pageScroll),
+                          child: child,
+                        ),
+                        child: SlamDoneFloatingTimerOverlay(
+                          controller: controller,
+                          compact: !desktop,
+                          size: timerSize,
+                          pinned: _floatingTimerPinned,
+                          onPinnedChanged: (value) {
+                            setState(() {
+                              if (value) {
+                                final visibleTop = (top - _floatingTimerPageScroll.value)
+                                    .clamp(0.0, maxTop)
+                                    .toDouble();
+                                _floatingTimerOffset = Offset(left, visibleTop);
+                                _floatingTimerPinned = true;
+                                _floatingTimerUnpinnedSection = null;
+                                _floatingTimerPageScroll.value = 0;
+                              } else {
+                                _floatingTimerPinned = false;
+                                _floatingTimerUnpinnedSection = controller.selectedSection;
+                                _floatingTimerPageScroll.value = 0;
+                              }
+                            });
+                          },
+                          onClose: controller.hideFloatingTimer,
+                          onResizeDelta: (delta) {
+                            setState(() {
+                              _floatingTimerSize = Size(
+                                (timerSize.width + delta.dx)
+                                    .clamp(minTimerWidth, maxTimerWidth)
+                                    .toDouble(),
+                                (timerSize.height + delta.dy)
+                                    .clamp(minTimerHeight, maxTimerHeight)
+                                    .toDouble(),
+                              );
+                            });
+                          },
+                          onDragDelta: (delta) {
+                            setState(() {
+                              _floatingTimerOffset = Offset(
+                                (_floatingTimerOffset.dx + delta.dx)
+                                    .clamp(0.0, maxLeft)
+                                    .toDouble(),
+                                (_floatingTimerOffset.dy + delta.dy)
+                                    .clamp(0.0, maxTop)
+                                    .toDouble(),
+                              );
+                            });
+                          },
+                        ),
                       ),
                     ),
                 ],
