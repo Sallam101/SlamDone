@@ -336,7 +336,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 label: const Text('Export for Autivra4'),
               ),
               OutlinedButton.icon(
-                onPressed: sync.isBusy ? null : () => sync.syncNow(),
+                onPressed: sync.isBusy ? null : () => sync.verifyAndRepair(),
                 icon: const Icon(Icons.sync),
                 label: const Text('Verify & repair sync'),
               ),
@@ -368,6 +368,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Sync audit: ${sync.auditSummary}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            if (sync.verificationDetail.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  sync.verificationDetail,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            if (sync.auditErrors.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Repair diagnostics',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      ...sync.auditErrors.entries.map(
+                        (entry) => Text('${entry.key}: ${entry.value}'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (sync.isSignedIn && !sync.verified)
               const Padding(
                 padding: EdgeInsets.only(top: 6),
@@ -391,7 +424,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 if (sync.isSignedIn)
                   FilledButton.tonalIcon(
-                    onPressed: sync.isBusy ? null : () => sync.syncNow(),
+                    onPressed: sync.isBusy ? null : () => sync.verifyAndRepair(),
                     icon: const Icon(Icons.sync),
                     label: const Text('Verify & repair sync'),
                   ),

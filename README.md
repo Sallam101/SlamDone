@@ -68,6 +68,12 @@ See [MIGRATION_AUTIVRA4.md](MIGRATION_AUTIVRA4.md). The complete migration forma
 
 After a successful import, SlamDone records the source checksum so importing the same migration file again is idempotent rather than duplicating records.
 
+
+## V7.8 repair diagnostics, smoother typing, and quick capture
+V7.8 makes **Verify & repair sync** deterministic: realtime listeners pause during the repair, each planner table is reconciled, Firestore is re-read after repair writes, and any failing table is shown in Settings instead of leaving the app in an unexplained Pending state. Ordinary records are uploaded in Firestore batches to make first-time PC publication much faster.
+
+Journal autosave is now typing-first: keystrokes do not rebuild the entire editor, local saves wait for a 900 ms pause, and the rest of the app is notified when editing ends. The Tasks tab also has a **Quick task** field on desktop and phone; pressing Enter or the quick-add button creates an Inbox task with the folder label `Uncategorized`, while the original full Task editor remains available for later organization.
+
 ## V7.7 verified cross-device repair
 If a device is signed in but shows missing planner data, use **Settings → Verify & repair sync**. V7.7 reconciles every planner entity table in both directions and reports verified local/cloud counts instead of treating a successful Firestore connection as proof that data matches.
 

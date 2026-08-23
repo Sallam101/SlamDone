@@ -23,6 +23,8 @@ class _TasksScreenState extends State<TasksScreen> {
   bool _includeDescendants = false;
   bool _mobileFiltersVisible = false;
   bool _loaded = false;
+  final TextEditingController _quickTaskController = TextEditingController();
+  bool _quickTaskSaving = false;
 
   @override
   void didChangeDependencies() {
@@ -47,6 +49,62 @@ class _TasksScreenState extends State<TasksScreen> {
     });
   }
 
+
+  @override
+  void dispose() {
+    _quickTaskController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addQuickTask(AppController controller) async {
+    final title = _quickTaskController.text.trim();
+    if (title.isEmpty || _quickTaskSaving) return;
+    setState(() => _quickTaskSaving = true);
+    try {
+      await controller.createQuickTask(title);
+      _quickTaskController.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Quick task added to Uncategorized.'),
+          duration: Duration(milliseconds: 1200),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _quickTaskSaving = false);
+    }
+  }
+
+  Widget _quickCaptureRow(AppController controller, {required bool mobile}) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _quickTaskController,
+            textInputAction: TextInputAction.done,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.flash_on_outlined, size: 20),
+              hintText: 'Quick task…',
+              helperText: mobile ? null : 'Enter adds it to Uncategorized',
+              isDense: true,
+            ),
+            onSubmitted: (_) => _addQuickTask(controller),
+          ),
+        ),
+        const SizedBox(width: 6),
+        IconButton.filled(
+          tooltip: 'Add quick task',
+          onPressed: _quickTaskSaving ? null : () => _addQuickTask(controller),
+          icon: _quickTaskSaving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.add_task),
+        ),
+      ],
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
@@ -129,6 +187,8 @@ class _TasksScreenState extends State<TasksScreen> {
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
+            _quickCaptureRow(controller, mobile: true),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -203,11 +263,15 @@ class _TasksScreenState extends State<TasksScreen> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+        child: Column(
+          children: [
+            _quickCaptureRow(controller, mobile: false),
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
               SizedBox(
                 width: 250,
                 child: TextField(
@@ -242,8 +306,10 @@ class _TasksScreenState extends State<TasksScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Task'),
               ),
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

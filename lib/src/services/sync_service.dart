@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../database/local_database.dart';
 import '../firebase/firebase_config.dart';
+import '../models/models.dart';
 import '../sync/conflict_resolver.dart';
 
 class SyncService extends ChangeNotifier {
@@ -32,6 +33,8 @@ class SyncService extends ChangeNotifier {
   bool _verified = false;
   Map<String, int> _localAuditCounts = const {};
   Map<String, int> _cloudAuditCounts = const {};
+  Map<String, String> _auditErrors = const {};
+  String _verificationStep = '';
 
   static const List<String> cloudTables = [
     'work_items',
@@ -65,15 +68,46 @@ class SyncService extends ChangeNotifier {
   bool get verified => _verified;
   Map<String, int> get localAuditCounts => Map.unmodifiable(_localAuditCounts);
   Map<String, int> get cloudAuditCounts => Map.unmodifiable(_cloudAuditCounts);
+  Map<String, String> get auditErrors => Map.unmodifiable(_auditErrors);
+  String get verificationDetail {
+    if (_verificationStep.isNotEmpty) return _verificationStep;
+    if (_auditErrors.isNotEmpty) {
+      return _auditErrors.entries
+          .map((entry) => '${entry.key}: ${entry.value}')
+          .join(' • ');
+    }
+    if (!_verified && _localAuditCounts.isNotEmpty) {
+      final keys = {..._localAuditCounts.keys, ..._cloudAuditCounts.keys}.toList()
+        ..sort();
+      final mismatches = keys.where(
+        (key) =>
+            (_localAuditCounts[key] ?? 0) != (_cloudAuditCounts[key] ?? 0),
+      );
+      if (mismatches.isNotEmpty) {
+        final mismatchText = mismatches.map((key) {
+          final local = _localAuditCounts[key] ?? 0;
+          final cloud = _cloudAuditCounts[key] ?? 0;
+          return '$key $local/$cloud';
+        }).join(' • ');
+        return 'Count mismatch • $mismatchText';
+      }
+    }
+    return _verified
+        ? 'Every planner table was reconciled and re-read from Firestore.'
+        : '';
+  }
   String get auditSummary {
     if (_localAuditCounts.isEmpty && _cloudAuditCounts.isEmpty) {
       return 'Not audited yet';
     }
-    String pair(String key) =>
-        '${_localAuditCounts[key] ?? 0}/${_cloudAuditCounts[key] ?? 0}';
     final prefix = _verified ? 'Verified local/cloud' : 'Local/cloud';
-    return '$prefix • items ${pair('work_items')} • habits ${pair('habits')} • '
-        'focus ${pair('time_sessions')} • journals ${pair('journal_entries')}';
+    String safePair(String key) {
+      final local = _localAuditCounts[key] ?? 0;
+      final cloud = _cloudAuditCounts[key] ?? 0;
+      return cloud < 0 ? '$local/ERR' : '$local/$cloud';
+    }
+    return '$prefix • items ${safePair('work_items')} • habits ${safePair('habits')} • '
+        'focus ${safePair('time_sessions')} • journals ${safePair('journal_entries')}';
   }
   String? get folderPath => null;
   bool get folderSyncEnabled => false;
@@ -118,6 +152,11 @@ class SyncService extends ChangeNotifier {
     if (_mode != 'firebase' || !firebaseAvailable || !isSignedIn) return;
     _scheduledPushTimer?.cancel();
     _verificationTimer?.cancel();
+    if (_verified) {
+      _verified = false;
+      _status = 'Change queued — syncing to cloud…';
+      notifyListeners();
+    }
     _scheduledPushTimer = Timer(delay, () {
       unawaited(_flushScheduledPush());
     });
@@ -128,7 +167,9 @@ class SyncService extends ChangeNotifier {
   }) {
     if (_mode != 'firebase' || !firebaseAvailable || !isSignedIn) return;
     _verified = false;
-    _status = 'Realtime connected — verifying planner data…';
+    if (_auditErrors.isEmpty) {
+      _status = 'Realtime connected — verifying planner data…';
+    }
     _verificationTimer?.cancel();
     _verificationTimer = Timer(delay, () {
       if (_busy) {
@@ -146,6 +187,9 @@ class SyncService extends ChangeNotifier {
       return;
     }
     await syncNow(silent: true, pullRemote: false);
+    if (_auditErrors.isEmpty) {
+      _scheduleVerificationAudit(delay: const Duration(milliseconds: 1400));
+    }
   }
 
   Future<void> handleAppResumed() async {
@@ -223,7 +267,9 @@ class SyncService extends ChangeNotifier {
           ? 'Ready to connect Google'
           : (_verified
               ? _verifiedStatus()
-              : 'Realtime connected — verifying planner data…');
+              : (_auditErrors.isNotEmpty
+                  ? 'Sync incomplete • ${_auditErrors.length} repair issue(s)'
+                  : 'Realtime connected — verifying planner data…'));
       notifyListeners();
     }
   }
@@ -239,18 +285,49 @@ class SyncService extends ChangeNotifier {
   DocumentReference<Map<String, dynamic>> _userRoot(User user) =>
       FirebaseFirestore.instance.collection('users').doc(user.uid);
 
-  Future<void> syncNow({bool silent = false, bool pullRemote = true}) async {
+  Future<void> verifyAndRepair() async {
+    if (_busy || _mode != 'firebase' || !firebaseAvailable || !isSignedIn) {
+      return;
+    }
+    _verificationTimer?.cancel();
+    _scheduledPushTimer?.cancel();
+    _verified = false;
+    _auditErrors = const {};
+    _localAuditCounts = const {};
+    _cloudAuditCounts = const {};
+    _verificationStep = 'Starting full planner verification…';
+    _status = 'Verifying every planner table…';
+    notifyListeners();
+
+    // Keep realtime listeners from racing the deterministic repair pass. They
+    // are restarted after the audit so normal live updates continue.
+    await _cancelRealtime();
+    try {
+      await syncNow(pullRemote: true, forceFullRepair: true);
+    } finally {
+      await startRealtime();
+      notifyListeners();
+    }
+  }
+
+  Future<void> syncNow({
+    bool silent = false,
+    bool pullRemote = true,
+    bool forceFullRepair = false,
+  }) async {
     if (_busy || _mode != 'firebase' || !firebaseAvailable || !isSignedIn) {
       return;
     }
     final user = currentUser!;
     _setBusy(true, silent ? _status : 'Syncing SlamDone…', notify: !silent);
+    if (pullRemote) {
+      _verified = false;
+      if (!forceFullRepair) {
+        _auditErrors = const {};
+      }
+    }
     try {
-      // Explicit/manual sync pulls before push so an older queued local row
-      // cannot overwrite a newer Firestore row. Periodic sync relies on the
-      // active realtime listeners and only drains the local dirty queue.
       if (pullRemote) {
-        _verified = false;
         await _reconcileAllEntities(user);
         await _reconcileSettings(user);
         await _reconcileTimerState(user);
@@ -258,23 +335,40 @@ class SyncService extends ChangeNotifier {
       await _pushQueueToFirestore(user);
       _lastSyncedAt = DateTime.now();
       _lastError = null;
+
       if (pullRemote) {
-        _verified = _auditCountsMatch();
-      }
-      if (_verified) {
+        _verified = _auditErrors.isEmpty && _auditCountsMatch();
+        _verificationStep = '';
+        if (_verified) {
+          _status = _verifiedStatus();
+        } else if (_auditErrors.isNotEmpty) {
+          _status = 'Sync incomplete • ${_auditErrors.length} repair issue(s)';
+        } else {
+          _status = 'Cloud connected — planner counts still differ';
+        }
+        await onRemoteChanged();
+      } else if (_verified) {
         _status = _verifiedStatus();
-      } else {
-        _status = 'Cloud connected — full planner verification pending';
+      } else if (_auditErrors.isNotEmpty) {
+        // Do not let a successful background queue drain erase the useful
+        // failure produced by the last full verification attempt.
+        _status = 'Sync incomplete • ${_auditErrors.length} repair issue(s)';
       }
-      await onRemoteChanged();
     } catch (error) {
       _verified = false;
       _lastError = error;
-      _status = 'Sync waiting — browser changes are safe';
+      _verificationStep = '';
+      _auditErrors = {..._auditErrors, 'sync': _shortError(error)};
+      _status = 'Sync incomplete • ${_auditErrors.length} repair issue(s)';
     } finally {
       _busy = false;
       notifyListeners();
     }
+  }
+
+  String _shortError(Object error) {
+    final text = error.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    return text.length <= 180 ? text : '${text.substring(0, 177)}…';
   }
 
   String _verifiedStatus() {
@@ -313,45 +407,142 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  Future<void> _pushEntityIds(
+    User user,
+    DocumentReference<Map<String, dynamic>> root,
+    String entityType,
+    List<String> entityIds,
+  ) async {
+    if (entityIds.isEmpty) return;
+    if (entityType == 'northstar_notes') {
+      for (final id in entityIds) {
+        await _pushEntityPayload(user, root, entityType, id);
+      }
+      return;
+    }
+
+    // Firestore batches cut the first full PC repair from hundreds of network
+    // round-trips to a handful while staying below the 500-operation limit.
+    const maxBatchWrites = 350;
+    for (var start = 0; start < entityIds.length; start += maxBatchWrites) {
+      final end = (start + maxBatchWrites).clamp(0, entityIds.length).toInt();
+      final batch = FirebaseFirestore.instance.batch();
+      var writes = 0;
+      for (final id in entityIds.sublist(start, end)) {
+        final payload = await database.cloudPayload(entityType, id, user.uid);
+        if (payload == null) continue;
+        batch.set(
+          root.collection(entityType).doc(id),
+          payload.cast<String, dynamic>(),
+          SetOptions(merge: true),
+        );
+        writes++;
+      }
+      if (writes > 0) await batch.commit();
+    }
+  }
+
   Future<void> _reconcileAllEntities(User user) async {
     final root = _userRoot(user);
     final localCounts = <String, int>{};
     final cloudCounts = <String, int>{};
+    final errors = <String, String>{..._auditErrors};
 
-    for (final entityType in cloudTables) {
-      final snapshot = await root.collection(entityType).get();
-      final remoteRows = await _rowsFromSnapshot(user, entityType, snapshot);
-      final remoteById = <String, Map<String, Object?>>{
-        for (final raw in remoteRows)
-          if (raw['id']?.toString().isNotEmpty == true)
-            raw['id'].toString(): Map<String, Object?>.from(raw)..remove('owner_id'),
-      };
+    for (var index = 0; index < cloudTables.length; index++) {
+      final entityType = cloudTables[index];
+      _verificationStep =
+          'Checking ${index + 1}/${cloudTables.length}: ${_tableLabel(entityType)}…';
+      _status = _verificationStep;
+      notifyListeners();
+      try {
+        final snapshot = await root.collection(entityType).get();
+        final remoteRows = await _rowsFromSnapshot(user, entityType, snapshot);
+        final remoteById = <String, Map<String, Object?>>{
+          for (final raw in remoteRows)
+            if (raw['id']?.toString().isNotEmpty == true)
+              raw['id'].toString():
+                  Map<String, Object?>.from(raw)..remove('owner_id'),
+        };
 
-      await database.mergeRemoteRows(
-        entityType,
-        remoteRows,
-        shouldDefer: entityType == 'journal_entries' ? isJournalEditing : null,
-      );
+        await database.mergeRemoteRows(
+          entityType,
+          remoteRows,
+          shouldDefer:
+              entityType == 'journal_entries' ? isJournalEditing : null,
+        );
 
-      final localRows = await database.loadRowsForSync(entityType);
-      final localIds = <String>{};
-      for (final rawLocal in localRows) {
-        final id = rawLocal['id']?.toString() ?? '';
-        if (id.isEmpty) continue;
-        localIds.add(id);
-        final localRow = Map<String, Object?>.from(rawLocal);
-        final remoteRow = remoteById[id];
-        if (remoteRow == null || incomingRecordIsNewer(localRow, remoteRow)) {
-          await _pushEntityPayload(user, root, entityType, id);
+        final localRows = await database.loadRowsForSync(entityType);
+        final uploadIds = <String>[];
+        for (final rawLocal in localRows) {
+          final id = rawLocal['id']?.toString() ?? '';
+          if (id.isEmpty) continue;
+          final localRow = Map<String, Object?>.from(rawLocal);
+          final remoteRow = remoteById[id];
+          if (remoteRow == null || incomingRecordIsNewer(localRow, remoteRow)) {
+            uploadIds.add(id);
+          }
         }
-      }
-      localCounts[entityType] = localIds.length;
-      cloudCounts[entityType] = {...remoteById.keys, ...localIds}.length;
-    }
+        await _pushEntityIds(user, root, entityType, uploadIds);
 
-    _localAuditCounts = {..._localAuditCounts, ...localCounts};
-    _cloudAuditCounts = {..._cloudAuditCounts, ...cloudCounts};
+        // Re-read Firestore after the repair writes. This is deliberately a
+        // real cloud count, not a synthetic union, so "Verified" proves that
+        // this browser can actually see the same records that exist locally.
+        final verifySnapshot = await root.collection(entityType).get();
+        if (entityType != 'northstar_notes') {
+          final verifyRows = await _rowsFromSnapshot(
+            user,
+            entityType,
+            verifySnapshot,
+          );
+          await database.mergeRemoteRows(
+            entityType,
+            verifyRows,
+            shouldDefer:
+                entityType == 'journal_entries' ? isJournalEditing : null,
+          );
+        }
+        final finalLocalRows = await database.loadRowsForSync(entityType);
+        localCounts[entityType] = finalLocalRows
+            .map((row) => row['id']?.toString() ?? '')
+            .where((id) => id.isNotEmpty)
+            .toSet()
+            .length;
+        cloudCounts[entityType] = verifySnapshot.docs.length;
+        errors.remove(entityType);
+        if (const {
+          'work_items',
+          'journal_entries',
+          'time_sessions',
+          'habit_entries',
+        }.contains(entityType)) {
+          await onRemoteChanged();
+        }
+      } catch (error) {
+        errors[entityType] = _shortError(error);
+        localCounts[entityType] =
+            (await database.loadRowsForSync(entityType)).length;
+        cloudCounts[entityType] = -1;
+      }
+      _localAuditCounts = {..._localAuditCounts, ...localCounts};
+      _cloudAuditCounts = {..._cloudAuditCounts, ...cloudCounts};
+      _auditErrors = Map.unmodifiable(errors);
+      notifyListeners();
+    }
   }
+
+  String _tableLabel(String entityType) => switch (entityType) {
+        'work_items' => 'tasks and Big Picture',
+        'canvas_layouts' => 'card layouts',
+        'journal_entries' => 'journals',
+        'journal_versions' => 'journal history',
+        'time_sessions' => 'focus sessions',
+        'habits' => 'habits',
+        'habit_entries' => 'habit check-ins',
+        'northstar_notes' => 'NorthStar',
+        'reward_ranks' => 'rewards',
+        'study_tables' => 'tables',
+        _ => entityType,
+      };
 
   bool _settingLocalIsNewer(
     Map<String, Object?> localRow,
@@ -367,73 +558,154 @@ class SyncService extends ChangeNotifier {
   }
 
   Future<void> _reconcileSettings(User user) async {
-    final snapshot = await _userRoot(user).collection('settings').get();
-    await _mergeSettingsSnapshot(user, snapshot);
-    final remoteByKey = <String, Map<String, Object?>>{
-      for (final doc in snapshot.docs)
-        if (!localOnlySettingKeys.contains(doc.id))
-          doc.id: Map<String, Object?>.from(doc.data()),
-    };
-    final localRows = (await database.loadAllSettingRows())
-        .where((row) => !localOnlySettingKeys.contains(row['setting_key']?.toString()))
-        .toList(growable: false);
-    final localKeys = <String>{};
-    for (final row in localRows) {
-      final key = row['setting_key']?.toString() ?? '';
-      if (key.isEmpty) continue;
-      localKeys.add(key);
-      final remote = remoteByKey[key];
-      if (remote == null || _settingLocalIsNewer(row, remote)) {
-        await _pushSetting(user, key);
+    _verificationStep = 'Checking settings…';
+    _status = _verificationStep;
+    notifyListeners();
+    final errors = <String, String>{..._auditErrors};
+    try {
+      final root = _userRoot(user);
+      final snapshot = await root.collection('settings').get();
+      await _mergeSettingsSnapshot(user, snapshot);
+      final remoteByKey = <String, Map<String, Object?>>{
+        for (final doc in snapshot.docs)
+          if (!localOnlySettingKeys.contains(doc.id))
+            doc.id: Map<String, Object?>.from(doc.data()),
+      };
+      final localRows = (await database.loadAllSettingRows())
+          .where(
+            (row) => !localOnlySettingKeys.contains(
+              row['setting_key']?.toString(),
+            ),
+          )
+          .toList(growable: false);
+      for (final row in localRows) {
+        final key = row['setting_key']?.toString() ?? '';
+        if (key.isEmpty) continue;
+        final remote = remoteByKey[key];
+        if (remote == null || _settingLocalIsNewer(row, remote)) {
+          await _pushSetting(user, key);
+        }
       }
+
+      final verifySnapshot = await root.collection('settings').get();
+      await _mergeSettingsSnapshot(user, verifySnapshot);
+      final finalLocalKeys = (await database.loadAllSettingRows())
+          .where(
+            (row) => !localOnlySettingKeys.contains(
+              row['setting_key']?.toString(),
+            ),
+          )
+          .map((row) => row['setting_key']?.toString() ?? '')
+          .where((key) => key.isNotEmpty)
+          .toSet();
+      final finalCloudKeys = verifySnapshot.docs
+          .where((doc) => !localOnlySettingKeys.contains(doc.id))
+          .map((doc) => doc.id)
+          .toSet();
+      _localAuditCounts = {
+        ..._localAuditCounts,
+        'app_settings': finalLocalKeys.length,
+      };
+      _cloudAuditCounts = {
+        ..._cloudAuditCounts,
+        'app_settings': finalCloudKeys.length,
+      };
+      errors.remove('app_settings');
+    } catch (error) {
+      errors['app_settings'] = _shortError(error);
+      _cloudAuditCounts = {..._cloudAuditCounts, 'app_settings': -1};
     }
-    _localAuditCounts = {..._localAuditCounts, 'app_settings': localKeys.length};
-    _cloudAuditCounts = {
-      ..._cloudAuditCounts,
-      'app_settings': {...remoteByKey.keys, ...localKeys}.length,
-    };
+    _auditErrors = Map.unmodifiable(errors);
+    notifyListeners();
   }
 
   Future<void> _reconcileTimerState(User user) async {
-    await _pullTimerState(user);
-    await _pushTimerState(user);
-    _localAuditCounts = {..._localAuditCounts, 'timer_state': 1};
-    _cloudAuditCounts = {..._cloudAuditCounts, 'timer_state': 1};
+    _verificationStep = 'Checking timer state…';
+    _status = _verificationStep;
+    notifyListeners();
+    final errors = <String, String>{..._auditErrors};
+    try {
+      await _pullTimerState(user);
+      await _pushTimerState(user);
+      final verify = await _userRoot(user)
+          .collection('meta')
+          .doc('timer_state')
+          .get();
+      await _mergeTimerSnapshot(user, verify);
+      _localAuditCounts = {..._localAuditCounts, 'timer_state': 1};
+      _cloudAuditCounts = {
+        ..._cloudAuditCounts,
+        'timer_state': verify.exists ? 1 : 0,
+      };
+      errors.remove('timer_state');
+    } catch (error) {
+      errors['timer_state'] = _shortError(error);
+      _localAuditCounts = {..._localAuditCounts, 'timer_state': 1};
+      _cloudAuditCounts = {..._cloudAuditCounts, 'timer_state': -1};
+    }
+    _auditErrors = Map.unmodifiable(errors);
+    notifyListeners();
   }
 
   Future<void> _pushQueueToFirestore(User user) async {
     final root = _userRoot(user);
     final queue = await database.loadSyncQueue(limit: 500);
+    final batchedGroups = <String, List<SyncQueueEntry>>{};
+    final directEntries = <SyncQueueEntry>[];
+
     for (final entry in queue) {
+      if (entry.entityType == 'app_settings' ||
+          entry.entityType == 'timer_state' ||
+          entry.entityType == 'northstar_notes') {
+        directEntries.add(entry);
+      } else {
+        batchedGroups.putIfAbsent(entry.entityType, () => []).add(entry);
+      }
+    }
+
+    for (final group in batchedGroups.entries) {
+      try {
+        await _pushEntityIds(
+          user,
+          root,
+          group.key,
+          group.value.map((entry) => entry.entityId).toList(growable: false),
+        );
+        for (final entry in group.value) {
+          await database.markQueueSuccess(entry.queueId);
+        }
+      } catch (error) {
+        for (final entry in group.value) {
+          await database.markQueueFailure(entry.queueId, error);
+        }
+        _auditErrors = {
+          ..._auditErrors,
+          'queue:${group.key}': _shortError(error),
+        };
+        _lastError = error;
+      }
+    }
+
+    for (final entry in directEntries) {
       try {
         final entityType = entry.entityType;
         if (entityType == 'app_settings') {
           if (!localOnlySettingKeys.contains(entry.entityId)) {
             await _pushSetting(user, entry.entityId);
           }
-          await database.markQueueSuccess(entry.queueId);
-          continue;
-        }
-        if (entityType == 'timer_state') {
+        } else if (entityType == 'timer_state') {
           await _pushTimerState(user);
-          await database.markQueueSuccess(entry.queueId);
-          continue;
+        } else {
+          await _pushEntityPayload(user, root, entityType, entry.entityId);
         }
-
-        final payload = await database.cloudPayload(
-          entityType,
-          entry.entityId,
-          user.uid,
-        );
-        if (payload == null) {
-          await database.markQueueSuccess(entry.queueId);
-          continue;
-        }
-        await _pushEntityPayload(user, root, entityType, entry.entityId);
         await database.markQueueSuccess(entry.queueId);
       } catch (error) {
         await database.markQueueFailure(entry.queueId, error);
-        rethrow;
+        _auditErrors = {
+          ..._auditErrors,
+          'queue:${entry.entityType}': _shortError(error),
+        };
+        _lastError = error;
       }
     }
   }
@@ -635,7 +907,7 @@ class SyncService extends ChangeNotifier {
     final user = currentUser;
     if (user == null) return;
     final root = _userRoot(user);
-    if (!_verified) {
+    if (!_verified && _auditErrors.isEmpty) {
       _status = 'Realtime connected — verifying planner data…';
       notifyListeners();
     }
@@ -653,7 +925,22 @@ class SyncService extends ChangeNotifier {
             );
             await onRemoteChanged();
             _lastSyncedAt = DateTime.now();
-            _scheduleVerificationAudit();
+            if (_localAuditCounts.containsKey(entityType)) {
+              final localCount =
+                  (await database.loadRowsForSync(entityType)).length;
+              _localAuditCounts = {
+                ..._localAuditCounts,
+                entityType: localCount,
+              };
+              _cloudAuditCounts = {
+                ..._cloudAuditCounts,
+                entityType: snapshot.docs.length,
+              };
+              if (_auditErrors.isEmpty && _auditCountsMatch()) {
+                _verified = true;
+                _status = _verifiedStatus();
+              }
+            }
             notifyListeners();
           } catch (error) {
             _verified = false;

@@ -37,12 +37,14 @@ class SlamDoneV77ContractTest(unittest.TestCase):
         self.assertIn('Verify & repair sync', settings)
         self.assertIn('Sync audit', settings)
 
-    def test_realtime_changes_invalidate_stale_audit_and_reverify(self):
+    def test_realtime_changes_keep_audit_current_and_local_pushes_reverify(self):
         sync = self.read('lib/src/services/sync_service.dart')
         self.assertIn('_verificationTimer', sync)
         self.assertIn('void _scheduleVerificationAudit(', sync)
         self.assertIn("_status = 'Realtime connected — verifying planner data…';", sync)
-        self.assertGreaterEqual(sync.count('_scheduleVerificationAudit();'), 1)
+        self.assertIn('entityType: snapshot.docs.length', sync)
+        self.assertIn('_auditCountsMatch()', sync)
+        self.assertIn('_scheduleVerificationAudit(delay:', sync)
 
     def test_mobile_big_picture_controls_are_compact_and_collapsible(self):
         big = self.read('lib/src/screens/big_picture_screen.dart')
@@ -94,9 +96,12 @@ class SlamDoneV77ContractTest(unittest.TestCase):
         self.assertIn('await syncService.syncNow();', export_block)
         self.assertIn('Export for Autivra4', settings)
 
-    def test_version_is_770(self):
+    def test_version_is_770_or_later(self):
+        import re
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'version:\s*7\.7\.0\+')
+        match = re.search(r'version:\s*(\d+)\.(\d+)\.(\d+)\+', pubspec)
+        self.assertIsNotNone(match)
+        self.assertGreaterEqual(tuple(map(int, match.groups())), (7, 7, 0))
 
 
 if __name__ == '__main__':

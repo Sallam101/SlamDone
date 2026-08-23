@@ -1,3 +1,11 @@
+# SlamDone V7.8.0 — Verified Repair + Smooth Capture
+
+- Reworked **Verify & repair sync** into an isolated, deterministic repair pass that pauses realtime listeners, reconciles every planner table, re-reads Firestore after writes, and only reports Verified when actual local/cloud counts match.
+- Added per-table sync progress and visible repair diagnostics so a failed entity can no longer collapse into an endless generic Pending state.
+- Background 15-second queue drains no longer overwrite the last full-repair error/status. One bad queued record no longer blocks unrelated planner tables from syncing.
+- Journal autosave no longer rebuilds the whole editor on every keystroke. Status uses a lightweight notifier, saves are debounced to 900 ms, and global UI notification is deferred until editing ends.
+- Added **Quick task** capture to Tasks on desktop and phone. Enter a title and press Enter/+ to create an Inbox task labelled `Uncategorized`; the existing detailed Task editor remains unchanged for later editing/categorizing.
+
 # SlamDone V7.6.1 — Mobile Build Hotfix
 
 - Fixed a Flutter compile error in Big Picture mobile mode: the `mobile` viewport flag is now declared inside `build()` where the hierarchy/canvas branches use it.

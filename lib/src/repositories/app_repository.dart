@@ -344,6 +344,30 @@ class AppRepository {
     return item;
   }
 
+  Future<WorkItem> createQuickTask(String title) async {
+    final siblings = (await database.loadWorkItems())
+        .where((item) => item.parentId == null && !item.isDeleted)
+        .toList();
+    final now = DateTime.now().toUtc();
+    final item = WorkItem(
+      id: _uuid.v4(),
+      title: title.trim().isEmpty ? 'Untitled' : title.trim(),
+      type: WorkItemType.task,
+      parentId: null,
+      sortKey: siblings.isEmpty
+          ? 1000
+          : siblings.map((item) => item.sortKey).reduce(_max) + 1000,
+      folder: 'Uncategorized',
+      gtdStatus: GtdStatus.inbox,
+      createdAt: now,
+      updatedAt: now,
+      revision: 1,
+      deviceId: deviceId,
+    );
+    await database.saveWorkItem(item);
+    return item;
+  }
+
   Future<WorkItem> updateWorkItem(WorkItem item) async {
     final normalized = _normalizeItemState(item);
     final updated = normalized.copyWith(

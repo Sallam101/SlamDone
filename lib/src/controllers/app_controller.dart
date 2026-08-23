@@ -640,6 +640,15 @@ class AppController extends ChangeNotifier {
     return item;
   }
 
+  Future<WorkItem> createQuickTask(String title) async {
+    final item = await repository.createQuickTask(title);
+    workItems = [...workItems, item]
+      ..sort((a, b) => a.sortKey.compareTo(b.sortKey));
+    notifyListeners();
+    _scheduleCloudPush();
+    return item;
+  }
+
   Future<void> updateWorkItem(WorkItem item) async {
     final before = itemById(item.id) ?? item;
     await repository.updateWorkItem(item);
@@ -824,11 +833,14 @@ class AppController extends ChangeNotifier {
     return entry;
   }
 
-  Future<JournalEntry> saveJournal(JournalEntry entry) async {
+  Future<JournalEntry> saveJournal(
+    JournalEntry entry, {
+    bool notifyGlobal = true,
+  }) async {
     final saved = await repository.saveJournal(entry);
     journals = [saved, ...journals.where((value) => value.id != saved.id)]
       ..sort((a, b) => b.entryDate.compareTo(a.entryDate));
-    notifyListeners();
+    if (notifyGlobal) notifyListeners();
     _scheduleCloudPush();
     return saved;
   }
@@ -845,7 +857,11 @@ class AppController extends ChangeNotifier {
 
   Future<void> endJournalEdit(String journalId) async {
     editingJournalIds.remove(journalId);
-    await syncService.syncNow(silent: true);
+    // Publish the silently autosaved journal to the rest of the UI once when
+    // editing ends. Let cloud reconciliation continue without blocking the
+    // editor from closing.
+    notifyListeners();
+    syncService.schedulePush(delay: const Duration(milliseconds: 120));
   }
 
   Future<Habit> createHabit({

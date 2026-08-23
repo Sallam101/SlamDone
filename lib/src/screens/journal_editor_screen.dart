@@ -23,8 +23,10 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
   Timer? _saveTimer;
   JournalEntry? _entry;
   AppController? _controller;
-  String _status = 'Loading…';
+  final ValueNotifier<String> _status = ValueNotifier<String>('Loading…');
   bool _closing = false;
+  bool _dirty = false;
+  Future<void>? _saveInFlight;
   List<Map<String, dynamic>> _prompts = [];
 
   @override
@@ -59,7 +61,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     _folder.text = entry.folder;
     _body.addListener(_queueSave);
     _folder.addListener(_queueSave);
-    setState(() => _status = 'Saved locally');
+    _status.value = 'Saved locally';
   }
 
   String _valueFor(JournalEntry entry, String id, Map<String, String> custom) =>
@@ -76,11 +78,12 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
   void _queueSave() {
     if (_entry == null || _closing) return;
-    if (mounted) setState(() => _status = 'Saving locally…');
+    _dirty = true;
+    _status.value = 'Editing…';
     _saveTimer?.cancel();
     _saveTimer = Timer(
-      const Duration(milliseconds: 300),
-      () => unawaited(_saveNow()),
+      const Duration(milliseconds: 900),
+      () => unawaited(_saveNow(notifyGlobal: false)),
     );
   }
 
@@ -115,14 +118,44 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     );
   }
 
-  Future<void> _saveNow() async {
-    if (_entry == null || _controller == null) {
+  Future<void> _saveNow({bool notifyGlobal = false}) async {
+    _saveTimer?.cancel();
+    final activeSave = _saveInFlight;
+    if (activeSave != null) {
+      await activeSave;
+    }
+    if (_entry == null || _controller == null || !_dirty) {
       return;
     }
-    _saveTimer?.cancel();
-    _entry = await _controller!.saveJournal(_draft());
-    if (mounted) {
-      setState(() => _status = 'Saved locally • sync queued');
+    final draft = _draft();
+    _dirty = false;
+    if (mounted) _status.value = 'Saving locally…';
+
+    final saveFuture = _performSave(draft, notifyGlobal: notifyGlobal);
+    _saveInFlight = saveFuture;
+    try {
+      await saveFuture;
+    } finally {
+      if (identical(_saveInFlight, saveFuture)) {
+        _saveInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _performSave(
+    JournalEntry draft, {
+    required bool notifyGlobal,
+  }) async {
+    try {
+      _entry = await _controller!.saveJournal(
+        draft,
+        notifyGlobal: notifyGlobal,
+      );
+      if (mounted) _status.value = 'Saved locally • sync queued';
+    } catch (_) {
+      _dirty = true;
+      if (mounted) _status.value = 'Save waiting — keep this page open';
+      rethrow;
     }
   }
 
@@ -131,7 +164,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       return;
     }
     _closing = true;
-    await _saveNow();
+    await _saveNow(notifyGlobal: false);
     if (_entry != null && _controller != null) {
       await _controller!.endJournalEdit(_entry!.id);
     }
@@ -148,6 +181,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     }
     _body.dispose();
     _folder.dispose();
+    _status.dispose();
     if (!_closing && _entry != null && _controller != null) {
       unawaited(_controller!.endJournalEdit(_entry!.id));
     }
@@ -175,7 +209,10 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(_status),
+                child: ValueListenableBuilder<String>(
+                  valueListenable: _status,
+                  builder: (context, value, child) => Text(value),
+                ),
               ),
             ),
             IconButton(
