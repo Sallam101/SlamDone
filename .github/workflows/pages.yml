@@ -33,6 +33,12 @@ jobs:
 
       - name: Create web platform shell
         run: flutter create --platforms=web --project-name=supeslam .
+        
+      - name: Remove generated Flutter template test
+        run: |
+          if [ -f test/widget_test.dart ] && grep -q 'MyApp' test/widget_test.dart; then
+            rm test/widget_test.dart
+          fi
 
       - name: Install browser SQLite WASM assets
         run: dart run sqflite_common_ffi_web:setup --force
