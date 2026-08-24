@@ -1,3 +1,10 @@
+# V7.13.1 - Upload-safe browser timer rollback
+
+- Keeps the V7.13 browser-only Picture-in-Picture timer rollback.
+- Makes the rollback safe when GitHub web uploads leave the old V7.12 `windows_timer_companion/` folder behind. Those stale files are inert and are not called by SlamDone.
+- Adds `Remove-Old-SlamDone-Timer-Companion.cmd` to stop and remove any V7.12 companion previously installed in Windows startup.
+- CI tests now verify runtime isolation from the native companion instead of requiring GitHub to physically delete an old folder during an upload-only patch.
+
 # V7.13.0 — Stable browser-only timer rollback
 
 - Fully removed the V7.12 Windows timer companion, loopback bridge, installer, background startup entry, and Windows CI build.

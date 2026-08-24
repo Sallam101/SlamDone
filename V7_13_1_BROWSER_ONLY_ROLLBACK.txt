@@ -1,0 +1,15 @@
+SlamDone V7.13.1 - Upload-safe browser-only timer rollback
+
+Purpose
+- Retires the V7.12 native Windows timer companion from SlamDone runtime use.
+- Restores the V7.11 browser Picture-in-Picture floating timer behavior.
+- Does not require GitHub web uploads to physically delete the old windows_timer_companion folder.
+- If that old folder remains in the repository, it is inert: SlamDone V7.13.1 has no loopback/native companion calls.
+
+One-time PC cleanup
+If you installed the V7.12 companion, run:
+  Remove-Old-SlamDone-Timer-Companion.cmd
+This stops the old process, removes its Windows startup entry, and deletes its local installation.
+
+GitHub upload
+Upload the CONTENTS of this patch over the repository root. It is safe if the old windows_timer_companion folder remains in GitHub.

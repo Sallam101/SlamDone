@@ -105,3 +105,7 @@ The V7.12 native Windows timer companion experiment was removed in V7.13. It is 
 ## V7.13 browser-only pinned timer
 
 V7.13 restores the stable V7.11 floating-timer implementation: Chrome/Edge Document Picture-in-Picture only, the existing soft completion chime, original timer colors, and the original optional opacity/fade control. There is no Windows companion, local loopback server, installer, or background process. True Windows-level see-through transparency is intentionally not provided in this rollback.
+
+## V7.13.1 browser-only timer rollback
+
+V7.13.1 does not require or connect to the retired V7.12 Windows timer companion. Desktop Pin uses the browser Picture-in-Picture timer again. This intentionally restores the V7.11 behavior: browser Picture-in-Picture keeps its browser-owned title bar, and its opacity control is only a visual fade rather than true Windows see-through transparency. No native background process is required. If V7.12's companion was previously installed, run `Remove-Old-SlamDone-Timer-Companion.cmd` once to remove its Windows startup entry and local files. Old companion source files left behind in a GitHub repository by an upload-only update are inert and do not affect SlamDone.
