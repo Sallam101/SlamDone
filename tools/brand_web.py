@@ -361,6 +361,18 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
 })();
 </script>'''
 
+support_link_bridge = r'''<script id="slamdone-support-link-bridge">
+(() => {
+  'use strict';
+  const patreonUrl = 'https://www.patreon.com/Sallam101/posts/buy-sallam-167511433?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link';
+  window.slamDoneOpenPatreonSupport = () => {
+    const opened = window.open(patreonUrl, '_blank', 'noopener,noreferrer');
+    if (opened) opened.opener = null;
+    return Boolean(opened);
+  };
+})();
+</script>'''
+
 index = web / 'index.html'
 if index.exists():
     text = index.read_text(encoding='utf-8')
@@ -383,6 +395,11 @@ if index.exists():
             '<meta name="description" content="SlamDone — STOP PLANNING. START FINISHING.">',
             text,
         )
+    bridges = []
     if 'id="slamdone-desktop-timer-bridge"' not in text:
-        text = text.replace('</body>', f'{desktop_timer_bridge}\n</body>')
+        bridges.append(desktop_timer_bridge)
+    if 'id="slamdone-support-link-bridge"' not in text:
+        bridges.append(support_link_bridge)
+    if bridges:
+        text = text.replace('</body>', f"{'\n'.join(bridges)}\n</body>")
     index.write_text(text, encoding='utf-8')

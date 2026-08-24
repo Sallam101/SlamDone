@@ -1,0 +1,11 @@
+SlamDone V7.13.1 Patreon compile-safe fix
+
+Upload the CONTENTS of this folder to the ROOT of the SlamDone repository and replace matching files.
+This patch does two things:
+1) Replaces the stale active .github/workflows/pages.yml V7.12 companion workflow with the V7.13.1 browser-only workflow.
+2) Removes the new url_launcher dependency and routes the Patreon button through the same dart:js_interop browser bridge architecture already used by SlamDone's working browser timer.
+
+Patreon destination:
+https://www.patreon.com/Sallam101/posts/buy-sallam-167511433?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link
+
+Create a NEW commit to main. Do not re-run #36; it uses the old commit.
