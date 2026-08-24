@@ -95,17 +95,8 @@ Overview supports Week / Month / Quarter / Year, six clickable hierarchy complet
 
 On supported desktop Chrome/Edge, pressing **Pin** moves the existing SlamDone floating timer into a browser Document Picture-in-Picture window. That window is always-on-top, so minimizing SlamDone or switching to another study/work application no longer hides the timer. The PiP card mirrors the same TimerEngine state; unpinning returns the same running timer to SlamDone rather than starting a second timer.
 
-The timer now uses the bundled **soft_chime.wav** for completion instead of the unreliable Flutter web system alert. A small opacity button reveals a temporary dimming slider, then hides it again when not needed. Browser PiP cannot provide true see-through Windows transparency. The in-app timer keeps the same title, analog/digital clock, Start/Pause/Resume, Reset, Stop & log, Stopwatch, resize, and color behavior. Unsupported browsers and mobile fall back to the existing in-app pin. Closing the entire SlamDone PWA may close the browser-owned PiP window; the always-on-top guarantee applies while SlamDone remains running/minimized.
+The timer now uses the bundled **soft_chime.wav** for completion instead of the unreliable Flutter web system alert. A small opacity button reveals a temporary 25–100% transparency slider, then hides it again when not needed. The in-app timer keeps the same title, analog/digital clock, Start/Pause/Resume, Reset, Stop & log, Stopwatch, resize, and color behavior. Unsupported browsers and mobile fall back to the existing in-app pin. Closing the entire SlamDone PWA may close the browser-owned PiP window; the always-on-top guarantee applies while SlamDone remains running/minimized.
+## V7.13 browser-only pinned timer rollback
 
+V7.13 removes the optional Windows Timer Companion and all background-process/loopback integration. Desktop Pin is browser-only again: supported Chrome/Edge desktop uses Document Picture-in-Picture, while unsupported browsers keep the in-app floating timer. The bundled soft completion chime and the previous eight timer accent choices remain. No Windows companion install or background process is required.
 
-## V7.12 Windows companion — retired
-
-The V7.12 native Windows timer companion experiment was removed in V7.13. It is no longer built, required, or contacted by SlamDone.
-
-## V7.13 browser-only pinned timer
-
-V7.13 restores the stable V7.11 floating-timer implementation: Chrome/Edge Document Picture-in-Picture only, the existing soft completion chime, original timer colors, and the original optional opacity/fade control. There is no Windows companion, local loopback server, installer, or background process. True Windows-level see-through transparency is intentionally not provided in this rollback.
-
-## V7.13.1 browser-only timer rollback
-
-V7.13.1 does not require or connect to the retired V7.12 Windows timer companion. Desktop Pin uses the browser Picture-in-Picture timer again. This intentionally restores the V7.11 behavior: browser Picture-in-Picture keeps its browser-owned title bar, and its opacity control is only a visual fade rather than true Windows see-through transparency. No native background process is required. If V7.12's companion was previously installed, run `Remove-Old-SlamDone-Timer-Companion.cmd` once to remove its Windows startup entry and local files. Old companion source files left behind in a GitHub repository by an upload-only update are inert and do not affect SlamDone.

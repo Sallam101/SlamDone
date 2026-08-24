@@ -4,15 +4,23 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@unittest.skip('V7.12 native companion intentionally retired in V7.13 browser-only rollback')
 class SlamDoneV712ContractTest(unittest.TestCase):
     def read(self, rel: str) -> str:
         return (ROOT / rel).read_text(encoding='utf-8')
 
-    def test_release_version_is_7120(self):
-        self.assertIn('version: 7.12.0+220', self.read('pubspec.yaml'))
+    def test_release_version_is_712_or_newer(self):
+        self.assertRegex(self.read('pubspec.yaml'), r'(?m)^version:\s*7\.(?:1[2-9]|[2-9]\d)\.\d+\+\d+\s*$')
+
+    def native_companion_present(self):
+        import re
+        pubspec = self.read('pubspec.yaml')
+        match = re.search(r'(?m)^version:\s*7\.(\d+)\.', pubspec)
+        minor = int(match.group(1)) if match else 0
+        return minor < 13 and (ROOT / 'windows_timer_companion').exists()
 
     def test_flutter_timer_has_named_background_themes_including_light_choices(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally restored the previous browser-only timer appearance')
         source = self.read('lib/src/widgets/floating_timer_overlay.dart')
         for marker in (
             '_TimerThemeChoice',
@@ -31,10 +39,14 @@ class SlamDoneV712ContractTest(unittest.TestCase):
         self.assertNotIn('static const _timerColors = <Color>[', source)
 
     def test_home_shell_accepts_sixteen_timer_themes(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally restored the previous browser-only timer appearance')
         source = self.read('lib/src/screens/home_shell.dart')
         self.assertIn('clamp(0, 15)', source)
 
     def test_native_companion_is_borderless_topmost_and_uses_real_window_opacity(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally removed the native timer companion')
         project = self.read('windows_timer_companion/SlamDoneTimerCompanion/SlamDoneTimerCompanion.csproj')
         form = self.read('windows_timer_companion/SlamDoneTimerCompanion/TimerForm.cs')
         self.assertIn('<UseWindowsForms>true</UseWindowsForms>', project)
@@ -48,6 +60,8 @@ class SlamDoneV712ContractTest(unittest.TestCase):
         self.assertIn('Resize timer', form)
 
     def test_companion_loopback_bridge_is_restricted_and_timer_only(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally removed the native timer companion')
         server = self.read('windows_timer_companion/SlamDoneTimerCompanion/LocalBridgeServer.cs')
         for marker in (
             '127.0.0.1:37110',
@@ -64,6 +78,8 @@ class SlamDoneV712ContractTest(unittest.TestCase):
         self.assertNotIn('planner', server.lower())
 
     def test_native_companion_has_sixteen_matching_themes_and_embedded_chime(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally removed the native timer companion')
         themes = self.read('windows_timer_companion/SlamDoneTimerCompanion/TimerTheme.cs')
         project = self.read('windows_timer_companion/SlamDoneTimerCompanion/SlamDoneTimerCompanion.csproj')
         for name in ('White', 'Soft gray', 'Cream', 'Mint', 'Ice blue', 'Lavender', 'Blush', 'Pale yellow'):
@@ -72,6 +88,8 @@ class SlamDoneV712ContractTest(unittest.TestCase):
         self.assertIn('EmbeddedResource', project)
 
     def test_browser_bridge_prefers_native_loopback_but_keeps_immediate_pip_fallback(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally removed the native timer companion')
         source = self.read('tools/brand_web.py')
         for marker in (
             '127.0.0.1:37110',
@@ -91,6 +109,8 @@ class SlamDoneV712ContractTest(unittest.TestCase):
         self.assertNotIn('id="sd-close"', source)
 
     def test_companion_install_is_per_user_and_workflow_builds_it_without_second_workflow(self):
+        if not self.native_companion_present():
+            self.skipTest('V7.13+ intentionally removed the native timer companion')
         install = self.read('windows_timer_companion/Install-SlamDoneTimer.cmd')
         workflow = self.read('.github/workflows/pages.yml')
         self.assertIn('%LOCALAPPDATA%', install)
