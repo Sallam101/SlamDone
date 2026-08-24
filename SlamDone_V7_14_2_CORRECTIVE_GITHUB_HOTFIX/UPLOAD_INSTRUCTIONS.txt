@@ -1,0 +1,23 @@
+SlamDone V7.14.2 — Corrective GitHub hotfix
+
+PRIMARY USE: apply this patch to the existing SlamDone repository that already has the
+V7.14.1 Combined Build + 5-Second Hotfix.
+
+1. Extract the V7.14.2 patch ZIP.
+2. Open its extracted folder.
+3. Upload/drag the CONTENTS into the ROOT of your existing SlamDone GitHub repository.
+4. Preserve the included paths (lib/, tool_tests/, plus root files).
+5. Replace the matching files when GitHub asks.
+6. Commit once and let the existing GitHub Pages workflow run.
+
+This release intentionally changes only the Journal, Habits, Tables, action-message timing,
+the two requested labels, release metadata/tests, and documentation.
+
+DATA SAFETY
+- No Firebase schema change.
+- No local SQLite/database schema change.
+- No migration-format change.
+- No deletion of existing user progress.
+- Journal Delete uses the existing soft-delete/tombstone pattern so sync can propagate it.
+
+Version: 7.14.2+242

@@ -1,0 +1,25 @@
+SlamDone V7.14.2 Corrective Hotfix — validation targets
+
+Regression contracts
+- Journal editor calls setState after asynchronous entry loading completes.
+- Journal list exposes confirmed Delete and repository/controller soft-delete APIs.
+- Habit Month top scrollbar uses a reserved header strip; checklist checkbox onChanged still
+  writes 1/0 through onSet.
+- Tables editor uses a fixed 58 px header, has Add row / Add column, and new tables start with
+  one blank two-column row.
+- Focus manual log/remove Undo has a hard five-second close timer.
+- Child-task completion/archive snackbar has a hard five-second close timer and the pending
+  auto-archive window is also five seconds so Undo remains valid for the full visible period.
+- Transient controller app-bar messages clear after five seconds.
+- Focus To Win -> Focus and Study Tables -> Tables are enforced for defaults and exact legacy
+  default labels.
+- web/index.html still contains <base href="$FLUTTER_BASE_HREF">.
+- GitHub Pages workflow still builds with --base-href /SlamDone/.
+- No database/migration backup artifacts are included.
+
+Local verification
+- Python repository contract suite: 154 tests run, 0 failures, 15 skipped.
+- Flutter/Dart SDK is not installed in this artifact environment, so the actual Flutter
+  compile remains the existing GitHub Actions runner's job after upload.
+
+Version: 7.14.2+242
