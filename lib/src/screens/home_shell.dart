@@ -43,7 +43,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   Size _floatingTimerSize = const Size(218, 214);
   bool _floatingTimerPinned = true;
   bool _desktopTimerOpen = false;
-  bool _desktopTimerPrepared = false;
   double _floatingTimerOpacity = 1.0;
   int _floatingTimerColorIndex = 0;
   AppSection? _floatingTimerUnpinnedSection;
@@ -83,7 +82,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _desktopTimerBridge?.prepare();
       final controller = _lifecycleController;
       if (controller != null) {
         unawaited(controller.syncService.handleAppResumed());
@@ -105,12 +103,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     _showAutoArchiveNoticeIfNeeded(controller);
-    if (controller.floatingTimerVisible && !_desktopTimerPrepared) {
-      _desktopTimerPrepared = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _desktopTimerBridge?.prepare();
-      });
-    }
     final tabs = controller.tabPreferences.isEmpty
         ? AppController.defaultTabPreferences()
         : controller.tabPreferences;
@@ -359,34 +351,47 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                           colorIndex: _floatingTimerColorIndex,
                           onOpacityChanged: (value) {
                             setState(() {
-                              _floatingTimerOpacity = value.clamp(.20, 1).toDouble();
+                              _floatingTimerOpacity = value.clamp(.25, 1).toDouble();
                             });
                             _pushDesktopTimerSnapshot();
                           },
                           onColorChanged: (value) {
-                            setState(() => _floatingTimerColorIndex = value.clamp(0, 15).toInt());
+                            setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
                             _pushDesktopTimerSnapshot();
                           },
                           onPinnedChanged: (value) {
                             if (value) {
-                              unawaited(
-                                _requestDesktopPinnedTimer(
-                                  controller,
-                                  timerSize,
-                                  left: left,
-                                  top: top,
-                                  maxTop: maxTop,
-                                ),
-                              );
-                              return;
+                              final bridge = _desktopTimerBridge;
+                              if (bridge != null && bridge.supported) {
+                                unawaited(
+                                  _openDesktopPinnedTimer(
+                                    controller,
+                                    timerSize,
+                                    left: left,
+                                    top: top,
+                                    maxTop: maxTop,
+                                  ),
+                                );
+                                return;
+                              }
                             } else if (_desktopTimerOpen) {
                               _returnDesktopTimerToApp();
                               return;
                             }
                             setState(() {
-                              _floatingTimerPinned = false;
-                              _floatingTimerUnpinnedSection = controller.selectedSection;
-                              _floatingTimerPageScroll.value = 0;
+                              if (value) {
+                                final visibleTop = (top - _floatingTimerPageScroll.value)
+                                    .clamp(0.0, maxTop)
+                                    .toDouble();
+                                _floatingTimerOffset = Offset(left, visibleTop);
+                                _floatingTimerPinned = true;
+                                _floatingTimerUnpinnedSection = null;
+                                _floatingTimerPageScroll.value = 0;
+                              } else {
+                                _floatingTimerPinned = false;
+                                _floatingTimerUnpinnedSection = controller.selectedSection;
+                                _floatingTimerPageScroll.value = 0;
+                              }
                             });
                           },
                           onClose: controller.hideFloatingTimer,
@@ -494,7 +499,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     bridge.update(_desktopTimerSnapshotJson(controller));
   }
 
-  Future<void> _requestDesktopPinnedTimer(
+  Future<void> _openDesktopPinnedTimer(
     AppController controller,
     Size timerSize, {
     required double left,
@@ -502,135 +507,23 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     required double maxTop,
   }) async {
     final bridge = _desktopTimerBridge;
-    if (bridge == null || !bridge.supported) {
-      _pinTimerInsideApp(controller, left: left, top: top, maxTop: maxTop);
-      return;
-    }
-
-    final openedNative = await _openDesktopPinnedTimer(
-      controller,
-      timerSize,
-      left: left,
-      top: top,
-      maxTop: maxTop,
-    );
-    if (!mounted || openedNative) return;
-
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('True transparent timer companion'),
-        content: Text(
-          bridge.nativeAvailable
-              ? 'The Windows timer companion was detected but could not open. Retry after allowing local-network access, or use the browser fallback.'
-              : 'The Windows timer companion is not installed or not reachable. Install it once for true 20–100% transparency and a borderless always-on-top timer. Browser fallback can stay on top, but it cannot be truly transparent.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop('download'),
-            child: const Text('Download companion'),
-          ),
-          TextButton(
-            onPressed: () async {
-              // requestWindow must be invoked directly from this button click
-              // so Chromium preserves transient user activation.
-              final opened = await bridge.openBrowserFallback(
-                _desktopTimerSnapshotJson(controller, timerSize),
-              );
-              if (dialogContext.mounted) {
-                Navigator.of(dialogContext).pop(opened ? 'fallback-opened' : 'fallback-failed');
-              }
-            },
-            child: const Text('Use browser fallback'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop('retry'),
-            child: const Text('Retry native'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || choice == null) return;
-
-    if (choice == 'download') {
-      bridge.downloadCompanion();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Download started. Extract it, run Install-SlamDoneTimer.cmd, then press Pin again.'),
-          duration: Duration(seconds: 6),
-        ),
-      );
-      return;
-    }
-
-    if (choice == 'retry') {
-      bridge.prepare();
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      final retried = await _openDesktopPinnedTimer(
-        controller,
-        timerSize,
-        left: left,
-        top: top,
-        maxTop: maxTop,
-      );
-      if (!mounted || retried) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Native companion is still unavailable. Confirm it is installed/running and allow local-network access for SlamDone.'),
-          duration: Duration(seconds: 6),
-        ),
-      );
-      return;
-    }
-
-    if (choice == 'fallback-opened') {
+    if (bridge == null || !bridge.supported) return;
+    // open() invokes requestWindow synchronously before its first await so the
+    // browser keeps the Pin click's transient user activation.
+    final opened = await bridge.open(_desktopTimerSnapshotJson(controller, timerSize));
+    if (!mounted) return;
+    if (!opened) {
       setState(() {
-        _desktopTimerOpen = true;
+        final visibleTop = (top - _floatingTimerPageScroll.value)
+            .clamp(0.0, maxTop)
+            .toDouble();
+        _floatingTimerOffset = Offset(left, visibleTop);
         _floatingTimerPinned = true;
         _floatingTimerUnpinnedSection = null;
         _floatingTimerPageScroll.value = 0;
       });
-      _pushDesktopTimerSnapshot();
       return;
     }
-
-    if (choice == 'fallback-failed') {
-      _pinTimerInsideApp(controller, left: left, top: top, maxTop: maxTop);
-    }
-  }
-
-  void _pinTimerInsideApp(
-    AppController controller, {
-    required double left,
-    required double top,
-    required double maxTop,
-  }) {
-    if (!mounted) return;
-    setState(() {
-      final visibleTop = (top - _floatingTimerPageScroll.value)
-          .clamp(0.0, maxTop)
-          .toDouble();
-      _floatingTimerOffset = Offset(left, visibleTop);
-      _floatingTimerPinned = true;
-      _floatingTimerUnpinnedSection = null;
-      _floatingTimerPageScroll.value = 0;
-    });
-  }
-
-  Future<bool> _openDesktopPinnedTimer(
-    AppController controller,
-    Size timerSize, {
-    required double left,
-    required double top,
-    required double maxTop,
-  }) async {
-    final bridge = _desktopTimerBridge;
-    if (bridge == null || !bridge.supported) return false;
-    // open() invokes requestWindow synchronously before its first await so the
-    // browser keeps the Pin click's transient user activation.
-    final opened = await bridge.open(_desktopTimerSnapshotJson(controller, timerSize));
-    if (!mounted) return false;
-    if (!opened) return false;
     setState(() {
       _desktopTimerOpen = true;
       _floatingTimerPinned = true;
@@ -638,7 +531,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       _floatingTimerPageScroll.value = 0;
     });
     _pushDesktopTimerSnapshot();
-    return true;
   }
 
   void _returnDesktopTimerToApp() {
@@ -672,7 +564,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (rawAction.startsWith('opacity:')) {
       final value = double.tryParse(rawAction.substring('opacity:'.length));
       if (value != null && mounted) {
-        setState(() => _floatingTimerOpacity = value.clamp(.20, 1).toDouble());
+        setState(() => _floatingTimerOpacity = value.clamp(.25, 1).toDouble());
         _pushDesktopTimerSnapshot();
       }
       return;
@@ -680,7 +572,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (rawAction.startsWith('color:')) {
       final value = int.tryParse(rawAction.substring('color:'.length));
       if (value != null && mounted) {
-        setState(() => _floatingTimerColorIndex = value.clamp(0, 15).toInt());
+        setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
         _pushDesktopTimerSnapshot();
       }
       return;

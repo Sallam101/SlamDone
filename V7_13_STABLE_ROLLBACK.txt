@@ -1,0 +1,7 @@
+SlamDone V7.13 stable browser-only timer rollback
+
+- Restores the exact V7.11 timer runtime and simple GitHub Pages workflow.
+- Removes all active V7.12 native companion/background-process integration.
+- No data reset or Firebase changes are required.
+- If windows_timer_companion/ remains as an old source folder in GitHub, it is dormant and never built or contacted. Delete it for repository cleanliness if desired.
+- If the V7.12 companion was installed on Windows, run Remove-SlamDoneTimerCompanion.cmd once.

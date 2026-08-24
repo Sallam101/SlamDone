@@ -6,23 +6,8 @@ external bool _desktopTimerSupported();
 @JS('slamDoneDesktopTimerIsOpen')
 external bool _desktopTimerIsOpen();
 
-@JS('slamDoneDesktopTimerNativeAvailable')
-external bool _desktopTimerNativeAvailable();
-
-@JS('slamDoneDesktopTimerUsingNative')
-external bool _desktopTimerUsingNative();
-
-@JS('slamDoneDesktopTimerPrepare')
-external void _desktopTimerPrepare();
-
 @JS('slamDoneDesktopTimerOpen')
 external JSPromise<JSBoolean> _desktopTimerOpen(String snapshotJson);
-
-@JS('slamDoneDesktopTimerOpenBrowserFallback')
-external JSPromise<JSBoolean> _desktopTimerOpenBrowserFallback(String snapshotJson);
-
-@JS('slamDoneDesktopTimerDownloadCompanion')
-external void _desktopTimerDownloadCompanion();
 
 @JS('slamDoneDesktopTimerUpdate')
 external void _desktopTimerUpdate(String snapshotJson);
@@ -67,50 +52,15 @@ class DesktopTimerBridge {
     }
   }
 
-  bool get nativeAvailable {
-    try {
-      return _desktopTimerNativeAvailable();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  bool get usingNative {
-    try {
-      return _desktopTimerUsingNative();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void prepare() {
-    try {
-      _desktopTimerPrepare();
-    } catch (_) {}
-  }
-
   Future<bool> open(String snapshotJson) async {
     try {
+      // Invoke JS immediately, before the first await, so Chromium still sees
+      // the Pin click as the transient user activation requestWindow needs.
       final promise = _desktopTimerOpen(snapshotJson);
       return (await promise.toDart).toDart;
     } catch (_) {
       return false;
     }
-  }
-
-  Future<bool> openBrowserFallback(String snapshotJson) async {
-    try {
-      final promise = _desktopTimerOpenBrowserFallback(snapshotJson);
-      return (await promise.toDart).toDart;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void downloadCompanion() {
-    try {
-      _desktopTimerDownloadCompanion();
-    } catch (_) {}
   }
 
   void update(String snapshotJson) {

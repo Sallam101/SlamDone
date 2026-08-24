@@ -25,12 +25,8 @@ class SlamDoneV711ContractTest(unittest.TestCase):
             'deadline',
         ):
             self.assertIn(marker, source)
-        # V7.12+ moves true opacity into the native Windows companion.
-        # The browser bridge must still carry timer state and real chime support,
-        # but it no longer pretends browser PiP can be truly transparent.
-        native_form = self.read('windows_timer_companion/SlamDoneTimerCompanion/TimerForm.cs')
-        self.assertIn('Opacity =', native_form)
-        self.assertRegex(native_form, r'\.20|20')
+        self.assertIn('opacity', source)
+        self.assertRegex(source, r'0\.(?:20|25)|\.(?:20|25)')
 
     def test_conditional_desktop_timer_bridge_is_web_only(self):
         common = self.read('lib/src/services/desktop_timer_bridge.dart')
@@ -86,11 +82,11 @@ class SlamDoneV711ContractTest(unittest.TestCase):
             '_showOpacity',
             'Icons.opacity',
             'Slider(',
-            'min: .20',
             'max: 1',
             'AnimatedOpacity',
         ):
             self.assertIn(marker, source)
+        self.assertRegex(source, r'min:\s*\.(?:20|25)')
         self.assertIn('onColorChanged', source)
         self.assertIn('colorIndex', source)
 

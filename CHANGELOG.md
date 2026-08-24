@@ -1,11 +1,11 @@
-# SlamDone V7.12.1 — Native Timer Detection Hotfix
+# V7.13.0 — Stable browser-only timer rollback
 
-- Pin no longer silently opens browser Picture-in-Picture when the true Windows Timer Companion is missing or unreachable.
-- Added an explicit **True transparent timer companion** prompt with **Download companion**, **Retry native**, and **Use browser fallback** actions.
-- Browser fallback no longer shows an opacity/transparency slider because browser PiP can only fade its own contents; true 20–100% transparency remains native-companion only.
-- Browser fallback now carries a small WEB indicator so it is immediately distinguishable from the borderless Windows companion.
-- Added a direct same-origin download action for `downloads/SlamDoneTimerCompanion.zip`.
-- Preserved all 16 timer background themes and the V7.12 Windows companion, chime, planner, sync, Tasks, Overview, Big Picture, and Firebase behavior.
+- Fully removed the V7.12 Windows timer companion, loopback bridge, installer, background startup entry, and Windows CI build.
+- Restored the V7.11 browser/PWA floating timer runtime exactly for stability.
+- Desktop Pin again uses Chromium Document Picture-in-Picture only.
+- Restored the original timer color palette and original optional opacity/fade control.
+- Kept the V7.11 bundled soft completion chime.
+- No planner, sync, Tasks, Overview, Big Picture, hierarchy, or Firebase data model changes.
 
 # SlamDone V7.12.0
 

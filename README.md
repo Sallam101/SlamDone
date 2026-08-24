@@ -95,20 +95,13 @@ Overview supports Week / Month / Quarter / Year, six clickable hierarchy complet
 
 On supported desktop Chrome/Edge, pressing **Pin** moves the existing SlamDone floating timer into a browser Document Picture-in-Picture window. That window is always-on-top, so minimizing SlamDone or switching to another study/work application no longer hides the timer. The PiP card mirrors the same TimerEngine state; unpinning returns the same running timer to SlamDone rather than starting a second timer.
 
-The timer now uses the bundled **soft_chime.wav** for completion instead of the unreliable Flutter web system alert. A small opacity button reveals a temporary 25–100% transparency slider, then hides it again when not needed. The in-app timer keeps the same title, analog/digital clock, Start/Pause/Resume, Reset, Stop & log, Stopwatch, resize, and color behavior. Unsupported browsers and mobile fall back to the existing in-app pin. Closing the entire SlamDone PWA may close the browser-owned PiP window; the always-on-top guarantee applies while SlamDone remains running/minimized.
+The timer now uses the bundled **soft_chime.wav** for completion instead of the unreliable Flutter web system alert. A small opacity button reveals a temporary dimming slider, then hides it again when not needed. Browser PiP cannot provide true see-through Windows transparency. The in-app timer keeps the same title, analog/digital clock, Start/Pause/Resume, Reset, Stop & log, Stopwatch, resize, and color behavior. Unsupported browsers and mobile fall back to the existing in-app pin. Closing the entire SlamDone PWA may close the browser-owned PiP window; the always-on-top guarantee applies while SlamDone remains running/minimized.
 
 
+## V7.12 Windows companion — retired
 
-## V7.12.1 native timer detection hotfix
+The V7.12 native Windows timer companion experiment was removed in V7.13. It is no longer built, required, or contacted by SlamDone.
 
-Desktop **Pin** now distinguishes the true Windows companion from Chromium's browser fallback. If the companion is not installed/reachable, SlamDone shows a one-time choice to download it, retry the native connection, or deliberately use browser Picture-in-Picture. The browser fallback is labeled **WEB** and no longer exposes the misleading opacity control; true 20–100% see-through transparency is available only in the borderless Windows companion.
+## V7.13 browser-only pinned timer
 
-After installing/updating SlamDone as a PWA, a normal refresh (or `Ctrl+Shift+R` once after a new deployment) updates cached web assets without deleting the browser-local planner database.
-
-## V7.12 Windows transparent pinned timer
-
-SlamDone can use an optional Windows Timer Companion for the pinned desktop timer. Unlike browser Picture-in-Picture, the companion is a borderless TopMost Windows window, so it has one SlamDone control bar and supports true 20–100% window transparency. The companion also includes 16 full timer themes, including light backgrounds such as White, Soft gray, Cream, Mint, Ice blue, Lavender, Blush, and Pale yellow.
-
-After a successful GitHub Actions deployment, download `downloads/SlamDoneTimerCompanion.zip` from the SlamDone Pages site, extract it, and run `Install-SlamDoneTimer.cmd`. Installation is per-user under `%LOCALAPPDATA%` and does not require administrator access. The first browser connection may request permission to communicate with the loopback companion.
-
-The native companion receives timer-only state through `127.0.0.1:37110`; it does not receive goals, journal entries, habits, Firebase credentials, or other planner data. If the companion is not available, Chromium Document Picture-in-Picture remains the fallback.
+V7.13 restores the stable V7.11 floating-timer implementation: Chrome/Edge Document Picture-in-Picture only, the existing soft completion chime, original timer colors, and the original optional opacity/fade control. There is no Windows companion, local loopback server, installer, or background process. True Windows-level see-through transparency is intentionally not provided in this rollback.
