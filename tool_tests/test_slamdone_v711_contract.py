@@ -25,8 +25,12 @@ class SlamDoneV711ContractTest(unittest.TestCase):
             'deadline',
         ):
             self.assertIn(marker, source)
-        self.assertIn('opacity', source)
-        self.assertRegex(source, r'0\.(?:20|25)|\.(?:20|25)')
+        # V7.12+ moves true opacity into the native Windows companion.
+        # The browser bridge must still carry timer state and real chime support,
+        # but it no longer pretends browser PiP can be truly transparent.
+        native_form = self.read('windows_timer_companion/SlamDoneTimerCompanion/TimerForm.cs')
+        self.assertIn('Opacity =', native_form)
+        self.assertRegex(native_form, r'\.20|20')
 
     def test_conditional_desktop_timer_bridge_is_web_only(self):
         common = self.read('lib/src/services/desktop_timer_bridge.dart')

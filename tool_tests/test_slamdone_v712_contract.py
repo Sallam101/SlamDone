@@ -8,8 +8,8 @@ class SlamDoneV712ContractTest(unittest.TestCase):
     def read(self, rel: str) -> str:
         return (ROOT / rel).read_text(encoding='utf-8')
 
-    def test_release_version_is_7120(self):
-        self.assertIn('version: 7.12.0+220', self.read('pubspec.yaml'))
+    def test_release_version_is_7120_or_newer(self):
+        self.assertRegex(self.read('pubspec.yaml'), r'(?m)^version:\s*7\.(?:12(?:\.\d+)?|1[3-9]\.\d+|[2-9]\d\.\d+)\+\d+\s*$')
 
     def test_flutter_timer_has_named_background_themes_including_light_choices(self):
         source = self.read('lib/src/widgets/floating_timer_overlay.dart')

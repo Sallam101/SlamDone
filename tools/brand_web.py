@@ -49,7 +49,7 @@ if manifest_path.exists():
     })
     manifest_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
 
-# V7.11 Desktop Pin. This bridge is injected into the Flutter-created web
+# V7.12.1 Desktop Pin. This bridge is injected into the Flutter-created web
 # shell so Dart can feature-detect Document Picture-in-Picture without making
 # browser-only APIs reachable from VM tests or non-web targets.
 desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
@@ -230,11 +230,6 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
   };
 
   const currentTheme = () => themes[Math.max(0, Math.min(themes.length - 1, Number(snapshot.colorIndex) || 0))];
-  const setPipFade = () => {
-    if (!isPipOpen()) return;
-    const root = pipWindow.document.getElementById('sd-timer-root');
-    if (root) root.style.opacity = String(clamp(snapshot.opacity ?? 1, 0.20, 1));
-  };
   const render = () => {
     if (!isPipOpen()) return;
     const doc = pipWindow.document;
@@ -253,7 +248,6 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
     root.style.setProperty('--accent', theme.accent);
     root.style.setProperty('--timer-bg', theme.background);
     root.style.setProperty('--timer-fg', theme.foreground);
-    root.style.opacity = String(clamp(snapshot.opacity ?? 1, 0.20, 1));
     title.textContent = String(snapshot.title || 'General focus');
     time.textContent = formatSeconds(seconds);
     mode.textContent = String(snapshot.mode || 'general').toUpperCase();
@@ -279,9 +273,10 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
         * { box-sizing: border-box; }
         html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
         button, input { font: inherit; }
-        #sd-timer-root { --accent:#78D12F; --timer-bg:#10150F; --timer-fg:#F7FAF5; width:100%; height:100%; min-width:156px; min-height:150px; display:grid; grid-template-rows:32px 1fr; overflow:hidden; border-radius:14px; background:var(--timer-bg); color:var(--timer-fg); border:1px solid color-mix(in srgb,var(--accent) 34%,transparent); transition:opacity 120ms ease,background 120ms ease,color 120ms ease; }
+        #sd-timer-root { --accent:#78D12F; --timer-bg:#10150F; --timer-fg:#F7FAF5; width:100%; height:100%; min-width:156px; min-height:150px; display:grid; grid-template-rows:32px 1fr; overflow:hidden; border-radius:14px; background:var(--timer-bg); color:var(--timer-fg); border:1px solid color-mix(in srgb,var(--accent) 34%,transparent); transition:background 120ms ease,color 120ms ease; }
         .header { min-width:0; display:flex; align-items:center; gap:2px; padding:2px 3px 2px 9px; background:color-mix(in srgb,var(--accent) 13%,var(--timer-bg)); }
         #sd-title { min-width:0; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:12px; font-weight:800; }
+        .fallback-badge { flex:0 0 auto; font-size:8px; line-height:1; font-weight:900; letter-spacing:.4px; padding:4px 5px; border-radius:5px; color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 38%,transparent); }
         .icon { width:27px; height:27px; padding:0; border:0; border-radius:7px; background:transparent; color:inherit; cursor:pointer; }
         .icon:hover { background:color-mix(in srgb,var(--accent) 18%,transparent); }
         .body { min-height:0; position:relative; display:grid; grid-template-rows:1fr 34px; padding:7px 8px 8px; }
@@ -295,7 +290,6 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
         .action.primary { background:var(--accent); color:white; border-color:var(--accent); }
         .popover { position:absolute; z-index:5; top:3px; left:7px; right:7px; min-height:38px; padding:5px 8px; border-radius:10px; background:var(--timer-bg); color:var(--timer-fg); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent); box-shadow:0 5px 18px rgba(0,0,0,.18); display:none; align-items:center; gap:8px; }
         .popover.show { display:flex; }
-        #sd-opacity-range { width:100%; accent-color:var(--accent); }
         #sd-palette { justify-content:center; flex-wrap:wrap; }
         .dot { width:22px; height:22px; border:2px solid var(--timer-fg); border-radius:50%; cursor:pointer; padding:0; }
         @media (max-width:210px),(max-height:195px) { .body{padding:4px 5px 6px;grid-template-rows:1fr 30px} #sd-dial{width:min(70%,125px)} .action{padding:0 5px;font-size:0} }
@@ -303,12 +297,11 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
     doc.body.innerHTML = `<main id="sd-timer-root">
       <div class="header">
         <div id="sd-title">General focus</div>
-        <button class="icon" id="sd-opacity" title="Fade browser fallback">◐</button>
+        <span class="fallback-badge" title="Browser fallback — install the SlamDone Timer Companion for true Windows transparency">WEB</span>
         <button class="icon" id="sd-color" title="Timer themes">●</button>
         <button class="icon" id="sd-unpin" title="Return timer to SlamDone">📌</button>
       </div>
       <section class="body">
-        <div id="sd-opacity-pop" class="popover"><span>◐</span><input id="sd-opacity-range" type="range" min="0.20" max="1" step="0.05" value="1"></div>
         <div id="sd-palette" class="popover"></div>
         <div class="clock-wrap"><div id="sd-dial"><div class="dial-inner"><div id="sd-time">25:00</div><div id="sd-mode">GENERAL</div></div></div></div>
         <div class="controls">
@@ -327,22 +320,8 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
     byId('sd-stopwatch').addEventListener('click', () => { primeChime(); action('stopwatch'); });
     byId('sd-unpin').addEventListener('click', () => action('unpin'));
 
-    const opacityPop = byId('sd-opacity-pop');
     const palettePop = byId('sd-palette');
-    byId('sd-opacity').addEventListener('click', () => {
-      palettePop.classList.remove('show');
-      opacityPop.classList.toggle('show');
-    });
-    const opacityRange = byId('sd-opacity-range');
-    opacityRange.value = String(clamp(snapshot.opacity ?? 1, 0.20, 1));
-    opacityRange.addEventListener('input', (event) => {
-      const value = clamp(event.target.value, 0.20, 1);
-      snapshot.opacity = value;
-      setPipFade();
-      action(`opacity:${value.toFixed(2)}`);
-    });
     byId('sd-color').addEventListener('click', () => {
-      opacityPop.classList.remove('show');
       palettePop.classList.toggle('show');
     });
     themes.forEach((theme, index) => {
@@ -413,30 +392,48 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
 
   const open = async (snapshotJson) => {
     snapshot = { ...snapshot, ...decode(snapshotJson) };
-    if (nativeAvailable) {
-      try {
-        await nativePost('/state', snapshot);
-        nativeActive = true;
-        startNativePolling();
-        return true;
-      } catch (error) {
-        console.warn('SlamDone native timer companion unavailable', error);
-        nativeAvailable = false;
-        nativeActive = false;
-        return false;
-      }
+    if (!nativeAvailable) await probeNative();
+    if (!nativeAvailable) return false;
+    try {
+      await nativePost('/state', snapshot);
+      nativeActive = true;
+      startNativePolling();
+      return true;
+    } catch (error) {
+      console.warn('SlamDone native timer companion unavailable', error);
+      nativeAvailable = false;
+      nativeActive = false;
+      return false;
     }
+  };
+
+  const openBrowserFallback = async (snapshotJson) => {
+    snapshot = { ...snapshot, ...decode(snapshotJson) };
     return openPip();
+  };
+
+  const downloadCompanion = () => {
+    const link = document.createElement('a');
+    link.href = new URL('downloads/SlamDoneTimerCompanion.zip', document.baseURI).href;
+    link.download = 'SlamDoneTimerCompanion.zip';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   window.addEventListener('focus', () => { if (nativePrepared) void probeNative(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && nativePrepared) void probeNative(); });
 
-  window.slamDoneDesktopTimer = { supports, isOpen, prepare, open, update, close, primeChime, playChime };
+  window.slamDoneDesktopTimer = { supports, isOpen, prepare, open, openBrowserFallback, downloadCompanion, update, close, primeChime, playChime };
   window.slamDoneDesktopTimerSupported = supports;
   window.slamDoneDesktopTimerIsOpen = isOpen;
+  window.slamDoneDesktopTimerNativeAvailable = () => nativeAvailable;
+  window.slamDoneDesktopTimerUsingNative = () => nativeActive;
   window.slamDoneDesktopTimerPrepare = prepare;
   window.slamDoneDesktopTimerOpen = open;
+  window.slamDoneDesktopTimerOpenBrowserFallback = openBrowserFallback;
+  window.slamDoneDesktopTimerDownloadCompanion = downloadCompanion;
   window.slamDoneDesktopTimerUpdate = update;
   window.slamDoneDesktopTimerClose = close;
   window.slamDoneDesktopTimerPrimeChime = primeChime;
