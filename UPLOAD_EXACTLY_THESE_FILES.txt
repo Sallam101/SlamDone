@@ -1,0 +1,17 @@
+SlamDone V7.13.1 FINAL CI FIX — upload-safe overlay
+
+Replace these exact GitHub paths with the files from this patch:
+1) .github/workflows/pages.yml
+2) tool_tests/test_slamdone_v7121_contract.py
+3) tool_tests/test_slamdone_v712_compile_contract.py
+4) pages.yml  (root reference copy; keeps it aligned with the real workflow)
+
+Do NOT re-run an old failed Actions run.
+Commit these replacements as a NEW commit to main and wait for the newly triggered workflow.
+
+Expected repository-contract result in the new run:
+Ran 129 tests
+OK (skipped=15)
+
+Why this patch exists:
+GitHub web upload overlays files but does not delete stale files. V7.13.1 removed the old V7.12.1/compile-only contract files from the clean ZIP, but those two files remained in the live repository. They were still testing the retired native Windows companion and caused the current 5 failures + 1 error.

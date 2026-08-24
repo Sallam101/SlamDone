@@ -4,6 +4,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@unittest.skip('V7.12.1 native companion intentionally retired in V7.13 browser-only rollback')
 class SlamDoneV7121ContractTest(unittest.TestCase):
     def read(self, rel: str) -> str:
         return (ROOT / rel).read_text(encoding='utf-8')

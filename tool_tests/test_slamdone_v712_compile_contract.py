@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
+@unittest.skip('V7.12 compile-only timer wrapper contract intentionally retired in V7.13 browser-only rollback')
 class SlamDoneV712CompileContractTest(unittest.TestCase):
     def test_timer_theme_wrapper_keeps_named_child_expression_open(self):
         src = (ROOT / 'lib/src/widgets/floating_timer_overlay.dart').read_text(encoding='utf-8')
