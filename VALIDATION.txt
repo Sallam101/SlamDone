@@ -1,16 +1,16 @@
-SlamDone V7.14.1+241 validation
-Date: 2026-08-24
+SlamDone V7.14.1 GitHub Build Base-Href Hotfix — Validation
 
-Implemented in this small patch:
-1. 52 Weeks auto-opens at the current week row when viewing the current ISO year.
-2. Habit Month horizontal day scrollbar is moved directly under the day header; current month auto-positions around today's column on first/current-month view.
-3. Focus manual log/remove Undo snackbar has a hard 5-minute lifetime and explicit close timer.
-4. Floating timer retains the original 8 accent choices and adds 8 light full-background themes: White, Soft gray, Cream, Mint, Ice blue, Lavender, Blush, Pale yellow. Browser Picture-in-Picture uses the same 16 choices.
+Root cause confirmed from the failed GitHub Actions log:
+Flutter web build requires the exact placeholder:
+  <base href="$FLUTTER_BASE_HREF">
+The V7.14.1 web/index.html did not contain it.
 
-Verification performed in the ChatGPT build sandbox:
-- Python repository contract suite: 146 tests passed, 15 intentionally skipped, 0 failures.
-- Python syntax check: tools/brand_web.py passed py_compile.
-- Browser desktop-timer bridge JavaScript: node --check passed.
-- Lightweight delimiter balance check passed for all modified Dart source files.
+TDD verification:
+- Regression test was first run against the broken index and failed as expected.
+- Added exactly one Flutter base-href placeholder.
+- Regression test then passed.
 
-The ChatGPT sandbox does not contain the Flutter SDK, so flutter test / flutter build web were not executed locally here. The existing GitHub Actions workflow will run Flutter tests and the release web build after upload.
+Compatibility:
+- Keeps the V7.14.1 light floating-timer themes.
+- Keeps flutter_bootstrap.js.
+- Does not touch the Focus Undo timeout, so it can be applied before or after the 5-second Undo hotfix.

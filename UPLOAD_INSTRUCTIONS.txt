@@ -1,12 +1,15 @@
-SlamDone V7.14.1 — Small usability patch
+SlamDone V7.14.1 — GitHub Build Base-Href Hotfix
 
-UPLOAD TO THE EXISTING SlamDone GITHUB REPOSITORY ROOT.
+This fixes the GitHub Actions failure:
+  Couldn't find the placeholder for base href.
+  Please add <base href="$FLUTTER_BASE_HREF"> to web/index.html
 
-1. Extract this ZIP on your PC.
-2. Open the extracted SlamDone_V7_14_1_USABILITY_SMALL_PATCH folder.
-3. Upload/drag the CONTENTS of that folder into the ROOT of the existing SlamDone GitHub repository.
-4. Keep the folder paths exactly as included (lib/, tools/, web/, tool_tests/).
-5. Replace/overwrite the matching existing files when GitHub asks.
-6. Commit the upload and let the existing GitHub Pages workflow run.
+UPLOAD:
+1. Extract this ZIP.
+2. Open the extracted SlamDone_V7_14_1_GITHUB_BUILD_BASE_HREF_HOTFIX folder.
+3. Upload the CONTENTS of that folder into the ROOT of the existing SlamDone GitHub repository.
+4. Preserve the web/ and tool_tests/ folders and replace web/index.html when GitHub asks.
+5. Commit the upload and let GitHub Actions run again.
 
-Do NOT delete or replace your private Autivra migration JSON/database/progress files. This patch does not change the Firebase schema or migration format.
+This hotfix does NOT change Focus, habits, calendar, timer behavior, Firebase, or user data.
+It is safe to apply either before or after the separate 5-second Undo hotfix.
