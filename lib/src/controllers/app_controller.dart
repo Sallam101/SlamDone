@@ -559,6 +559,33 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<TimeSession> addManualFocusSession() async {
+    final session = await repository.createManualFocusSession(
+      minutes: defaultSessionMinutes,
+    );
+    await refreshSessions();
+    _scheduleCloudPush();
+    return session;
+  }
+
+  Future<TimeSession?> removeFocusSession(String id) async {
+    final removed = await repository.softDeleteTimeSession(id);
+    if (removed != null) {
+      await refreshSessions();
+      _scheduleCloudPush();
+    }
+    return removed;
+  }
+
+  Future<TimeSession?> restoreFocusSession(String id) async {
+    final restored = await repository.restoreTimeSession(id);
+    if (restored != null) {
+      await refreshSessions();
+      _scheduleCloudPush();
+    }
+    return restored;
+  }
+
   Future<void> refreshHabits() async {
     habits = await repository.loadHabits();
     habitEntries = await repository.loadHabitEntries();
@@ -1323,29 +1350,32 @@ class AppController extends ChangeNotifier {
     await database.setSetting('focus_panel_hidden', hidden.toString());
   }
 
-  int get todaySessionCount {
+  List<TimeSession> get todayFocusSessions {
     final now = DateTime.now();
-    return sessions.where((session) {
+    final result = sessions.where((session) {
       final local = session.startedAt.toLocal();
-      return local.year == now.year &&
+      return session.completed &&
+          session.mode != TimerMode.stopwatch &&
+          local.year == now.year &&
           local.month == now.month &&
-          local.day == now.day &&
-          session.completed &&
-          session.mode != TimerMode.stopwatch;
-    }).length;
+          local.day == now.day;
+    }).toList();
+    result.sort((a, b) {
+      final byStart = a.startedAt.compareTo(b.startedAt);
+      if (byStart != 0) return byStart;
+      final byEnd = a.endedAt.compareTo(b.endedAt);
+      if (byEnd != 0) return byEnd;
+      return a.id.compareTo(b.id);
+    });
+    return result;
   }
 
-  int get todayMinutes {
-    final now = DateTime.now();
-    return sessions
-        .where((session) {
-          final local = session.startedAt.toLocal();
-          return local.year == now.year &&
-              local.month == now.month &&
-              local.day == now.day;
-        })
-        .fold(0, (sum, session) => sum + (session.elapsedSeconds / 60).round());
-  }
+  int get todaySessionCount => todayFocusSessions.length;
+
+  int get todayMinutes => todayFocusSessions.fold<int>(
+    0,
+    (sum, session) => sum + (session.elapsedSeconds / 60).round(),
+  );
 
   int get totalRewardPoints {
     final focusPoints = sessions

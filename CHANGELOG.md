@@ -1,3 +1,12 @@
+# V7.14.0 - Focus accuracy + Uncategorized visibility
+
+- Added selected-by-default **Uncategorized** visibility chips to Big Picture and Mind Map. Hiding them is view-only and does not delete, archive, move, or rewrite stored layouts.
+- Today's focus goal squares now represent real completed focus-session records. Empty squares can log a manual session using the current Min/session setting; green squares remove that exact session with Undo.
+- Manual add/remove uses the existing `time_sessions` ledger and tombstone sync, so Today/week/month/quarter/year totals, rewards, exports, and other synced devices follow the same corrected history automatically while goal settings remain unchanged.
+- Timer interruption handling is conservative: persisted running timers reopen paused, and a suspended heartbeat gap freezes the last known elapsed/remaining values instead of counting PC sleep, shutdown, closed-app time, or a long execution suspension.
+- Explicit Pause/Resume from the main or floating timer continues to use the same TimerEngine state; a detected interruption never auto-resumes or auto-repeats.
+- Preserved the Firebase schema, hierarchy model, canvas layout data, Patreon support, and browser-only GitHub Pages workflow.
+
 # V7.13.1 - Upload-safe browser timer rollback
 
 - Keeps the V7.13 browser-only Picture-in-Picture timer rollback.

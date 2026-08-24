@@ -4,6 +4,7 @@ import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
 import '../repositories/app_repository.dart';
+import '../utils/work_item_filters.dart';
 import '../widgets/canvas_workspace.dart';
 import '../widgets/focus_dialogs.dart';
 import '../widgets/hierarchy_layout.dart';
@@ -19,18 +20,23 @@ class MindMapScreen extends StatefulWidget {
 class _MindMapScreenState extends State<MindMapScreen> {
   bool _toolbarVisible = true;
   WorkItemType? _levelFilter;
+  bool _showUncategorized = true;
   WorkItemVisibilityFilter _visibilityFilter =
       WorkItemVisibilityFilter.hideArchived;
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final allItems = controller.workItems
-        .where(
-          (item) =>
-              !item.isDeleted && item.matchesVisibilityFilter(_visibilityFilter),
-        )
-        .toList();
+    final allItems = controller.workItems.where((item) {
+      if (item.isDeleted || !item.matchesVisibilityFilter(_visibilityFilter)) {
+        return false;
+      }
+      if (!_showUncategorized && isUncategorizedTask(item)) return false;
+      return true;
+    }).toList();
+    final uncategorizedCount = controller.workItems
+        .where(isUncategorizedTask)
+        .length;
     var layouts = <String, CanvasLayout>{
       for (var index = 0; index < allItems.length; index++)
         allItems[index].id: controller.layoutFor(
@@ -133,6 +139,23 @@ class _MindMapScreenState extends State<MindMapScreen> {
                                       }
                                     },
                                   ),
+                                ),
+                                FilterChip(
+                                  avatar: const Icon(Icons.inbox_outlined, size: 17),
+                                  label: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('Uncategorized'),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '$uncategorizedCount',
+                                        style: const TextStyle(fontWeight: FontWeight.w800),
+                                      ),
+                                    ],
+                                  ),
+                                  selected: _showUncategorized,
+                                  onSelected: (value) =>
+                                      setState(() => _showUncategorized = value),
                                 ),
                                 SizedBox(
                                   width: (MediaQuery.sizeOf(context).width - 70)

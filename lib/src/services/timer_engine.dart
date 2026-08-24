@@ -18,6 +18,7 @@ class TimerEngine extends ChangeNotifier {
   final AppRepository repository;
   final TimerOwner role;
   final Uuid _uuid = const Uuid();
+  static const Duration suspensionGapThreshold = Duration(seconds: 5);
 
   TimerStateRecord _state = TimerStateRecord.idle();
   Timer? _ticker;
@@ -39,6 +40,12 @@ class TimerEngine extends ChangeNotifier {
 
   Future<void> initialize() async {
     _state = await database.loadTimerState();
+    if (_state.running && !_state.paused) {
+      await _freezeForInterruption(
+        DateTime.now().toUtc(),
+        notify: false,
+      );
+    }
     if (role == TimerOwner.floating && isActive) {
       await takeOwnership();
     }
@@ -77,7 +84,13 @@ class TimerEngine extends ChangeNotifier {
         return;
       }
       if (!_state.running || _state.paused) return;
-      final next = _calculateCurrent(_state, DateTime.now().toUtc());
+      final now = DateTime.now().toUtc();
+      final gap = now.difference(_state.updatedAt);
+      if (gap > suspensionGapThreshold) {
+        await _freezeForInterruption(now);
+        return;
+      }
+      final next = _calculateCurrent(_state, now);
       final second = next.mode == TimerMode.stopwatch
           ? next.elapsedSeconds
           : next.remainingSeconds;
@@ -93,6 +106,23 @@ class TimerEngine extends ChangeNotifier {
     } finally {
       _processing = false;
     }
+  }
+
+  Future<void> _freezeForInterruption(
+    DateTime now, {
+    bool notify = true,
+  }) async {
+    _state = _state.copyWith(
+      owner: role,
+      running: false,
+      paused: true,
+      startedAt: null,
+      endAt: null,
+      updatedAt: now,
+    );
+    _lastPersistedSecond = -1;
+    await database.saveTimerState(_state);
+    if (notify) notifyListeners();
   }
 
   TimerStateRecord _calculateCurrent(TimerStateRecord current, DateTime now) {

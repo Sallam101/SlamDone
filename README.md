@@ -109,3 +109,10 @@ V7.13 restores the stable V7.11 floating-timer implementation: Chrome/Edge Docum
 ## V7.13.1 browser-only timer rollback
 
 V7.13.1 does not require or connect to the retired V7.12 Windows timer companion. Desktop Pin uses the browser Picture-in-Picture timer again. This intentionally restores the V7.11 behavior: browser Picture-in-Picture keeps its browser-owned title bar, and its opacity control is only a visual fade rather than true Windows see-through transparency. No native background process is required. If V7.12's companion was previously installed, run `Remove-Old-SlamDone-Timer-Companion.cmd` once to remove its Windows startup entry and local files. Old companion source files left behind in a GitHub repository by an upload-only update are inert and do not affect SlamDone.
+
+
+## V7.14.0 focus accuracy and reversible daily sessions
+
+V7.14 makes focus tracking intentionally conservative. A timer that survives a browser/PC suspension no longer charges the suspended wall-clock gap: on reopen or a detected long heartbeat gap it is paused at the last known elapsed/remaining values and waits for an explicit Resume. Today's focus squares are now backed by actual completed `time_sessions`: click an empty square to log one manual session using the current Min/session value, or click a green square to remove that exact recorded session with Undo. Because week/month/quarter/year analytics are derived from the same ledger, corrections propagate to all totals without changing any period goal settings.
+
+Big Picture and Mind Map also include a selected-by-default **Uncategorized** chip. Turning it off hides root Uncategorized tasks from that view only; no work item or saved canvas layout is modified.

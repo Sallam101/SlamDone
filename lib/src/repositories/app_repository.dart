@@ -690,6 +690,82 @@ class AppRepository {
   Future<void> saveTimeSession(TimeSession session) =>
       database.saveTimeSession(session);
 
+  Future<TimeSession> createManualFocusSession({
+    required int minutes,
+    DateTime? now,
+  }) async {
+    final instant = (now ?? DateTime.now()).toUtc();
+    final seconds = minutes.clamp(1, 720).toInt() * 60;
+    final session = TimeSession(
+      id: _uuid.v4(),
+      mode: TimerMode.general,
+      title: 'Manual focus',
+      plannedSeconds: seconds,
+      elapsedSeconds: seconds,
+      startedAt: instant,
+      endedAt: instant,
+      completed: true,
+      notes: '[slamdone:manual-focus]',
+      createdAt: instant,
+      updatedAt: instant,
+      revision: 1,
+      deviceId: deviceId,
+    );
+    await database.saveTimeSession(session);
+    return session;
+  }
+
+  TimeSession _copyTimeSessionForLedger(
+    TimeSession current, {
+    required DateTime updatedAt,
+    required DateTime? deletedAt,
+  }) => TimeSession(
+    id: current.id,
+    ownerId: current.ownerId,
+    mode: current.mode,
+    workItemId: current.workItemId,
+    title: current.title,
+    plannedSeconds: current.plannedSeconds,
+    elapsedSeconds: current.elapsedSeconds,
+    startedAt: current.startedAt,
+    endedAt: current.endedAt,
+    completed: current.completed,
+    notes: current.notes,
+    createdAt: current.createdAt,
+    updatedAt: updatedAt,
+    revision: current.revision + 1,
+    deviceId: deviceId,
+    deletedAt: deletedAt,
+  );
+
+  Future<TimeSession?> softDeleteTimeSession(String id) async {
+    final current = await database.getTimeSession(id);
+    if (current == null) return null;
+    if (current.deletedAt != null) return current;
+    final now = DateTime.now().toUtc();
+    final deleted = _copyTimeSessionForLedger(
+      current,
+      updatedAt: now,
+      deletedAt: now,
+    );
+    await database.saveTimeSession(deleted);
+    return deleted;
+  }
+
+  Future<TimeSession?> restoreTimeSession(String id) async {
+    final current = await database.getTimeSession(id);
+    if (current == null) return null;
+    if (current.deletedAt == null) return current;
+    final now = DateTime.now().toUtc();
+    final restored = _copyTimeSessionForLedger(
+      current,
+      updatedAt: now,
+      deletedAt: null,
+    );
+    await database.saveTimeSession(restored);
+    return restored;
+  }
+
   Future<String?> exportForAutivra4() async {
     final allSettings = await database.loadAllSettings();
     final compatibleSettings = <String, String>{};

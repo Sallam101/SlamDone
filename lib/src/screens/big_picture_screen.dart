@@ -4,6 +4,7 @@ import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
 import '../repositories/app_repository.dart';
+import '../utils/work_item_filters.dart';
 import '../widgets/canvas_workspace.dart';
 import '../widgets/focus_dialogs.dart';
 import '../widgets/hierarchy_layout.dart';
@@ -28,6 +29,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
   PriorityLevel? _priorityFilter;
   String _search = '';
   bool _showDescendants = false;
+  bool _showUncategorized = true;
   Set<WorkStatus> _visibleStatuses = <WorkStatus>{
     WorkStatus.active,
     WorkStatus.completed,
@@ -50,11 +52,16 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final mobile = MediaQuery.sizeOf(context).width < 700;
-    final allItems = controller.workItems
-        .where(
-          (item) => !item.isDeleted && _visibleStatuses.contains(item.status),
-        )
-        .toList();
+    final allItems = controller.workItems.where((item) {
+      if (item.isDeleted || !_visibleStatuses.contains(item.status)) {
+        return false;
+      }
+      if (!_showUncategorized && isUncategorizedTask(item)) return false;
+      return true;
+    }).toList();
+    final uncategorizedCount = controller.workItems
+        .where(isUncategorizedTask)
+        .length;
     final query = _search.trim().toLowerCase();
     final filtered = allItems.where((item) {
       if (_levelFilter != null && item.type != _levelFilter) return false;
@@ -168,6 +175,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                             .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
                             .length,
                       ),
+                      _uncategorizedChip(uncategorizedCount),
                       FilledButton.icon(
                         onPressed: () =>
                             showWorkItemEditor(context, controller),
@@ -403,6 +411,9 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
     final archivedCount = controller.workItems
         .where((item) => !item.isDeleted && item.status == WorkStatus.archived)
         .length;
+    final uncategorizedCount = controller.workItems
+        .where(isUncategorizedTask)
+        .length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -463,6 +474,7 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
                         status: WorkStatus.archived,
                         count: archivedCount,
                       ),
+                      _uncategorizedChip(uncategorizedCount),
                     ],
                   ),
                 ),
@@ -509,6 +521,22 @@ class _BigPictureScreenState extends State<BigPictureScreen> {
       ),
       selected: _visibleStatuses.contains(status),
       onSelected: (_) => _toggleStatus(status),
+    );
+  }
+
+  Widget _uncategorizedChip(int count) {
+    return FilterChip(
+      avatar: const Icon(Icons.inbox_outlined, size: 17),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Uncategorized'),
+          const SizedBox(width: 5),
+          Text('$count', style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
+      selected: _showUncategorized,
+      onSelected: (value) => setState(() => _showUncategorized = value),
     );
   }
 

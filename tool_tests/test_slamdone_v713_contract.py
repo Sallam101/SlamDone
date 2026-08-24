@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,8 +9,12 @@ class SlamDoneV713ContractTest(unittest.TestCase):
     def read(self, rel: str) -> str:
         return (ROOT / rel).read_text(encoding='utf-8')
 
-    def test_release_version_is_7131(self):
-        self.assertIn('version: 7.13.1+231', self.read('pubspec.yaml'))
+    def test_release_version_is_7131_or_newer(self):
+        pubspec = self.read('pubspec.yaml')
+        match = re.search(r'(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$', pubspec)
+        self.assertIsNotNone(match)
+        version = tuple(int(value) for value in match.groups())
+        self.assertGreaterEqual(version[:3], (7, 13, 1))
 
     def test_browser_only_rollback_is_upload_safe_even_if_stale_companion_files_remain(self):
         # GitHub's web "Upload files" flow cannot delete a directory that already

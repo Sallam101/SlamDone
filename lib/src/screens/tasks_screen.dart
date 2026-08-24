@@ -6,6 +6,7 @@ import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
 import '../utils/app_utils.dart';
+import '../utils/work_item_filters.dart';
 import '../widgets/work_item_dialogs.dart';
 import '../widgets/work_item_tree_list.dart';
 
@@ -145,11 +146,6 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  bool _isUncategorized(WorkItem item) =>
-      item.parentId == null &&
-      (item.folder.trim().isEmpty || item.folder == 'Uncategorized') &&
-      item.type == WorkItemType.task;
-
   bool _smartFilterMatches(WorkItem item, DateTime now) {
     final anySmart = _urgent || _overdue || _dueToday || _thisWeek || _undated;
     if (!anySmart) return true;
@@ -170,7 +166,7 @@ class _TasksScreenState extends State<TasksScreen> {
   List<WorkItem> _filteredItems(AppController controller, DateTime now) {
     final eligible = controller.workItems.where((item) {
       if (item.isDeleted || !_statusVisible(item)) return false;
-      if (_showUncategorized && !_isUncategorized(item)) return false;
+      if (_showUncategorized && !isUncategorizedTask(item)) return false;
       if (!_smartFilterMatches(item, now)) return false;
       if (_search.isNotEmpty) {
         final query = _search.toLowerCase();

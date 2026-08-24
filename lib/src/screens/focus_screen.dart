@@ -292,10 +292,50 @@ class _DailyGoalPanel extends StatelessWidget {
 
   final AppController controller;
 
+  Future<void> _addManualSession(BuildContext context) async {
+    final session = await controller.addManualFocusSession();
+    if (!context.mounted) return;
+    final minutes = (session.elapsedSeconds / 60).round();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Logged $minutes min manual focus.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            unawaited(controller.removeFocusSession(session.id));
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _removeSession(
+    BuildContext context,
+    TimeSession session,
+  ) async {
+    final removed = await controller.removeFocusSession(session.id);
+    if (removed == null || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Removed ${_exactFocusDuration(session.elapsedSeconds)}.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            unawaited(controller.restoreFocusSession(session.id));
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final completed = controller.todaySessionCount;
+    final todaySessions = controller.todayFocusSessions;
+    final completed = todaySessions.length;
     final total = controller.dailySessionGoal;
+    final displayCount = total > todaySessions.length
+        ? total
+        : todaySessions.length;
     final left = (total - completed).clamp(0, total).toInt();
     final goalMinutes = total * controller.defaultSessionMinutes;
     final completedMinutes = controller.todayMinutes;
@@ -356,28 +396,56 @@ class _DailyGoalPanel extends StatelessWidget {
             Wrap(
               spacing: 5,
               runSpacing: 5,
-              children: List.generate(
-                total,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 25,
-                  height: 25,
-                  decoration: BoxDecoration(
-                    color: index < completed
-                        ? Colors.green
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+              children: List.generate(displayCount, (index) {
+                final session = index < todaySessions.length
+                    ? todaySessions[index]
+                    : null;
+                final occupied = session != null;
+                final localTime = occupied
+                    ? MaterialLocalizations.of(context).formatTimeOfDay(
+                        TimeOfDay.fromDateTime(session.startedAt.toLocal()),
+                      )
+                    : null;
+                final manual = occupied &&
+                    session.notes.contains('[slamdone:manual-focus]');
+                final tooltip = occupied
+                    ? '${manual ? 'Manual focus' : session.title} • $localTime • ${_exactFocusDuration(session.elapsedSeconds)} • Click to remove'
+                    : 'Log ${controller.defaultSessionMinutes} min manual focus';
+                return Tooltip(
+                  message: tooltip,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: index < completed
-                          ? Colors.green.shade700
-                          : Theme.of(context).colorScheme.outlineVariant,
+                    onTap: occupied
+                        ? () => _removeSession(context, session)
+                        : () => _addManualSession(context),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 25,
+                      height: 25,
+                      decoration: BoxDecoration(
+                        color: occupied
+                            ? Colors.green
+                            : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: occupied
+                              ? Colors.green.shade700
+                              : Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: occupied
+                          ? const Icon(
+                              Icons.check,
+                              size: 17,
+                              color: Colors.white,
+                            )
+                          : const SizedBox.shrink(),
                     ),
                   ),
-                  child: index < completed
-                      ? const Icon(Icons.check, size: 17, color: Colors.white)
-                      : null,
-                ),
-              ),
+                );
+              }),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -1389,6 +1457,17 @@ int _focusSecondsBetween(
           local.isBefore(endExclusive);
     })
     .fold<int>(0, (sum, session) => sum + session.elapsedSeconds);
+
+String _exactFocusDuration(int totalSeconds) {
+  final seconds = totalSeconds.clamp(0, 8640000).toInt();
+  final hours = seconds ~/ 3600;
+  final minutes = (seconds % 3600) ~/ 60;
+  final remainder = seconds % 60;
+  if (hours > 0) {
+    return '${hours}h ${minutes.toString().padLeft(2, '0')}m ${remainder.toString().padLeft(2, '0')}s';
+  }
+  return '${minutes.toString().padLeft(2, '0')}:${remainder.toString().padLeft(2, '0')}';
+}
 
 String _focusDuration(int seconds) {
   final minutes = (seconds / 60).round();
