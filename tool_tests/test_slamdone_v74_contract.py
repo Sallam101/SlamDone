@@ -55,8 +55,9 @@ class SlamDoneV74ContractTest(unittest.TestCase):
         self.assertIn('rowHeights', tables)
         self.assertIn('resizeRow', tables)
         self.assertIn('cellFormats', tables)
-        self.assertIn('Bold cell', tables)
+        self.assertIn('Bold', tables)
         self.assertIn('Cell color', tables)
+        self.assertIn('Text color', tables)
         self.assertIn('excel_community: ^2.2.1', pubspec)
         self.assertNotRegex(pubspec, r'\n\s*excel:\s*\^')
 

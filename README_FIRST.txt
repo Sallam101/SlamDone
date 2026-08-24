@@ -1,13 +1,14 @@
-SlamDone V7.14.4 — STABLE TABLES + GTD DRAG CORRECTIVE HOTFIX
+SlamDone V7.14.5 — BRAND ICON + SIMPLE TABLES CORRECTIVE HOTFIX
 
-Use the cumulative ROOT overlay ZIP on an existing V7.14.1–V7.14.3 GitHub repository.
+Use the ROOT overlay ZIP on the current V7.14.x GitHub repository.
 Upload the extracted contents directly into the repository root and replace matching files.
 
 This release keeps all previous V7.14.x fixes and adds:
-- repeatable Add row / Add column table growth
-- horizontal column drag resizing
-- bottom-edge row drag resizing
-- wrapped text that fills/reflows inside resized cells
-- bidirectional GTD drag between Inbox / To Be Done / In Progress / Completed / Archive
+- SlamDone favicon + PWA/taskbar icon restoration with cache-busted manifest links
+- simple repeatable Add row / Add column table growth
+- compact default rows
+- draggable column width and row height
+- wrapped text inside resized cells
+- selected-cell background color, text color, bold, and font size
 
-Version: 7.14.4+244
+Version: 7.14.5+245

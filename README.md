@@ -17,6 +17,14 @@ Production URL after Pages is enabled:
 
 The planner UI writes to local SQLite first. SlamDone then queues changed records for Firestore. Cloud records merge back into local SQLite using the existing Autivra ordering: higher revision, then newer `client_updated_at`, then device ID as deterministic tie-break.
 
+
+## V7.14.5 browser identity and Tables stability
+
+- SlamDone's approved icon is explicitly re-applied after GitHub Actions regenerates the Flutter web shell, including favicon, PWA manifest icons, Apple touch icon, and theme color. Icon URLs are versioned so Chrome/Edge and Windows shortcuts can refresh stale cached branding.
+- Tables now use a simple bounded two-axis spreadsheet canvas. Add Row and Add Column can be repeated without a fixed grid-size limit, new rows start compact, column width and row height remain draggable, and wrapped text stays inside the resized cell.
+- Click a data cell before formatting it. The toolbar then supports **Bold**, **Cell color**, **Text color**, and **Cell font** for that selected cell.
+- Existing table data, import/export, archive/delete behavior, Firebase sync, GTD/PARA, Journal, Focus, Habits, Big Picture, NorthStar, and Rewards data models are unchanged.
+
 ## SlamDone 7.4 brand, timer and analytics upgrade
 
 - Approved S/check speed-mark identity with **STOP PLANNING. START FINISHING.** across the header, drawer, PWA icon and metadata.

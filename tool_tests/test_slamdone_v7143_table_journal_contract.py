@@ -15,12 +15,11 @@ class SlamDoneV7143TableJournalContractTest(unittest.TestCase):
         start = src.index('Widget _buildTableCanvas(')
         end = src.index('Widget _buildHeaderRow(', start)
         canvas = src[start:end]
-        self.assertEqual(canvas.count('SingleChildScrollView('), 1)
+        self.assertGreaterEqual(canvas.count('SingleChildScrollView('), 2)
         self.assertIn('scrollDirection: Axis.horizontal', canvas)
-        self.assertIn('child: Column(', canvas)
-        self.assertIn('Expanded(', canvas)
-        self.assertIn('ListView.builder(', canvas)
-        self.assertIn('itemCount: rows.length', canvas)
+        self.assertIn('scrollDirection: Axis.vertical', canvas)
+        self.assertIn('_buildSpreadsheetGrid(controller)', canvas)
+        self.assertNotIn('ListView.builder(', canvas)
         self.assertIn('constraints.maxWidth.isFinite', canvas)
         self.assertIn('constraints.maxHeight.isFinite', canvas)
         self.assertNotIn('IntrinsicHeight(', canvas)
@@ -59,7 +58,7 @@ class SlamDoneV7143TableJournalContractTest(unittest.TestCase):
 
     def test_release_version_is_7143(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:3\+243|4\+244)\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:3\+243|4\+244|5\+245)\s*$')
 
 
 if __name__ == '__main__':

@@ -1,13 +1,12 @@
-SlamDone V7.14.4 — Cumulative GitHub root overlay
+SlamDone V7.14.5 — GitHub root overlay
 
-1. Extract `SlamDone_V7_14_4_CUMULATIVE_ROOT_OVERLAY.zip`.
-2. Open the extracted folder. You should immediately see `lib`, `tool_tests`, `pubspec.yaml`, and documentation files. There is no wrapper folder.
+1. Extract `SlamDone_V7_14_5_BRAND_TABLES_ROOT_OVERLAY.zip`.
+2. Open the extracted folder. You should immediately see `lib`, `web`, `assets`, `tools`, `tool_tests`, `pubspec.yaml`, and documentation files. There is no wrapper folder.
 3. Upload those contents into the ROOT of your existing SlamDone GitHub repository.
 4. Replace matching files when GitHub asks.
 5. Commit the upload and let the existing GitHub Pages workflow run.
-
-The overlay is cumulative over the prior V7.14.x corrective builds. It includes the earlier Journal/Habits/5-second-message/name fixes plus the V7.14.3 Journal delete repair and this V7.14.4 Tables/GTD repair.
+6. After Pages finishes, refresh SlamDone. If Windows/Chrome/Edge still shows an old generic globe on a previously installed taskbar shortcut, remove that old shortcut/install once and install/pin SlamDone again so the operating-system icon cache is rebuilt.
 
 No database, Firebase schema, migration payload, or personal progress file is included.
 
-Version: 7.14.4+244
+Version: 7.14.5+245

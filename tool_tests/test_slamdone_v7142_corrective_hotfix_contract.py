@@ -40,7 +40,7 @@ class SlamDoneV7142CorrectiveHotfixContractTest(unittest.TestCase):
     def test_tables_have_safe_fixed_header_height_and_simple_add_controls(self):
         src = self.read('lib/src/screens/study_tables_screen.dart')
         repo = self.read('lib/src/repositories/app_repository.dart')
-        self.assertIn('static const double _tableHeaderHeight = 58.0;', src)
+        self.assertRegex(src, r'static const double _tableHeaderHeight = (?:48|58)\.0;')
         self.assertNotIn('return IntrinsicHeight(', src)
         self.assertIn('height: _tableHeaderHeight,', src)
         self.assertIn("label: const Text('Add row')", src)
@@ -78,7 +78,7 @@ class SlamDoneV7142CorrectiveHotfixContractTest(unittest.TestCase):
 
     def test_release_version_is_7142_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243|4\+244)\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243|4\+244|5\+245)\s*$')
 
 
 if __name__ == '__main__':

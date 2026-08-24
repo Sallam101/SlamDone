@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import re
 import shutil
 
 root = Path(__file__).resolve().parents[1]
@@ -30,24 +31,27 @@ mark.write_text('''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
 </svg>''', encoding='utf-8')
 
 manifest_path = web / 'manifest.json'
-if manifest_path.exists():
-    data = json.loads(manifest_path.read_text(encoding='utf-8'))
-    data.update({
-        'name': 'SlamDone',
-        'short_name': 'SlamDone',
-        'description': 'SlamDone — STOP PLANNING. START FINISHING.',
-        'display': 'standalone',
-        'start_url': '.',
-        'background_color': '#090D12',
-        'theme_color': '#78D12F',
-        'icons': [
-            {'src': 'icons/Icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
-            {'src': 'icons/Icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
-            {'src': 'icons/Icon-maskable-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'maskable'},
-            {'src': 'icons/Icon-maskable-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
-        ],
-    })
-    manifest_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+try:
+    data = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {}
+except (json.JSONDecodeError, OSError):
+    data = {}
+data.update({
+    'name': 'SlamDone',
+    'short_name': 'SlamDone',
+    'description': 'SlamDone — STOP PLANNING. START FINISHING.',
+    'display': 'standalone',
+    'start_url': '.',
+    'scope': '.',
+    'background_color': '#090D12',
+    'theme_color': '#78D12F',
+    'icons': [
+        {'src': 'icons/Icon-192.png?v=7145', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
+        {'src': 'icons/Icon-512.png?v=7145', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+        {'src': 'icons/Icon-maskable-192.png?v=7145', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'maskable'},
+        {'src': 'icons/Icon-maskable-512.png?v=7145', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
+    ],
+})
+manifest_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
 
 # V7.11 Desktop Pin. This bridge is injected into the Flutter-created web
 # shell so Dart can feature-detect Document Picture-in-Picture without making
@@ -403,14 +407,25 @@ if index.exists():
         '<title>SlamDone — Plan • Focus • Finish</title>',
     ):
         text = text.replace(old, '<title>SlamDone — STOP PLANNING. START FINISHING.</title>')
-    text = text.replace('href="favicon.png"', 'href="favicon.png"')
+    # Flutter's generated shell changes between SDK releases. Recreate the
+    # browser/PWA identity links every build instead of relying on template
+    # defaults, and cache-bust icon references so browsers/taskbars refresh.
+    text = re.sub(r'\s*<link[^>]+rel=["\'][^"\']*(?:icon|manifest)[^"\']*["\'][^>]*>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s*<meta[^>]+name=["\']theme-color["\'][^>]*>', '', text, flags=re.IGNORECASE)
+    brand_links = '''
+  <link rel="icon" type="image/png" sizes="512x512" href="favicon.png?v=7145">
+  <link rel="shortcut icon" type="image/png" href="favicon.png?v=7145">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png?v=7145">
+  <link rel="manifest" href="manifest.json?v=7145">
+  <meta name="theme-color" content="#78D12F">
+'''
+    text = text.replace('</head>', f'{brand_links}</head>')
     if 'name="description"' not in text:
         text = text.replace(
             '</head>',
             '  <meta name="description" content="SlamDone — STOP PLANNING. START FINISHING.">\n</head>',
         )
     else:
-        import re
         text = re.sub(
             r'<meta name="description" content="[^"]*">',
             '<meta name="description" content="SlamDone — STOP PLANNING. START FINISHING.">',

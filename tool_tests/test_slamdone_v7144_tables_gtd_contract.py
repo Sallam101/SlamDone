@@ -14,13 +14,11 @@ class SlamDoneV7144TablesGtdContractTest(unittest.TestCase):
         start = src.index('Widget _buildTableCanvas(')
         end = src.index('Widget _buildHeaderRow(', start)
         canvas = src[start:end]
-        self.assertIn('SingleChildScrollView(', canvas)
+        self.assertGreaterEqual(canvas.count('SingleChildScrollView('), 2)
         self.assertIn('scrollDirection: Axis.horizontal', canvas)
-        self.assertIn('child: Column(', canvas)
-        self.assertIn('Expanded(', canvas)
-        self.assertIn('ListView.builder(', canvas)
-        self.assertIn('itemCount: rows.length', canvas)
-        self.assertNotIn('SingleChildScrollView(\n              controller: _verticalController', canvas)
+        self.assertIn('scrollDirection: Axis.vertical', canvas)
+        self.assertIn('_buildSpreadsheetGrid(controller)', canvas)
+        self.assertNotIn('ListView.builder(', canvas)
 
     def test_tables_add_helpers_are_repeatable_and_normalize_shape(self):
         src = self.read('lib/src/screens/study_tables_screen.dart')
@@ -47,8 +45,8 @@ class SlamDoneV7144TablesGtdContractTest(unittest.TestCase):
         cell_start = src.index('Widget _buildEditableCell(')
         cell_end = src.index('void resizeRow(', cell_start)
         cell = src[cell_start:cell_end]
-        self.assertIn('expands: wrapText', cell)
-        self.assertIn('minLines: wrapText ? null : 1', cell)
+        self.assertNotIn('expands: wrapText', cell)
+        self.assertIn('minLines: 1', cell)
         self.assertIn('maxLines: wrapText ? null : 1', cell)
         self.assertIn('textAlignVertical: TextAlignVertical.top', cell)
 
@@ -70,7 +68,7 @@ class SlamDoneV7144TablesGtdContractTest(unittest.TestCase):
 
     def test_release_version_is_7144(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.4\+244\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:4\+244|5\+245)\s*$')
 
 
 if __name__ == '__main__':

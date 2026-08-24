@@ -1,27 +1,23 @@
-SlamDone V7.14.4 Stable Tables + GTD Drag Corrective Hotfix — validation targets
+SlamDone V7.14.5 Brand Icon + Simple Tables Corrective Hotfix — validation targets
 
-New V7.14.4 regression contracts
-- Tables canvas uses one horizontal viewport containing a bounded Column and vertical ListView.builder.
-- Repeated Add column / Add row actions route through dedicated helpers and normalize grid shape.
-- Column widths, row heights, and row cell counts remain aligned with the current grid dimensions.
-- Column resize remains a right-edge drag interaction.
-- Row resize uses a compact bottom-edge drag target that fits the minimum row height.
-- Wrapped text editors expand inside the resized row and reflow when column width changes.
-- GTD drops route through AppController.moveWorkItemToGtdStatus.
-- Active GTD destinations cancel pending auto-archive and reduce a fully-complete checklist below the repository completion threshold, preventing snap-back to Completed.
-- Completed and Archive destinations continue to map to the corresponding WorkStatus.
+New V7.14.5 regression contracts
+- The post-Flutter-create branding script recreates browser favicon, shortcut icon, Apple touch icon, PWA manifest, and theme-color links even when the generated index starts without them.
+- Favicon and manifest/icon URLs are cache-busted with the V7.14.5 token.
+- The manifest is created when missing and includes SlamDone 192/512 normal + maskable icons.
+- Tables use two bounded axis scroll views around one content-sized spreadsheet grid with no nested ListView/Expanded body.
+- Add row and Add column remain repeatable and normalize grid dimensions.
+- New rows default to 42 px and new columns to 180 px; both remain draggable/resizable.
+- Data cells no longer use the previous expanding TextFormField layout path.
+- Selected cells support background color, text color, bold, and per-cell font size.
+- Row/column deletion preserves unaffected per-cell formatting.
 
-Cumulative V7.14.2/V7.14.3 contracts retained
-- Journal editor async loading repair and direct Journal delete remain present.
-- Habit checklist hit targets remain clickable.
-- Five-second action notices remain bounded.
-- Focus / Tables naming migration remains present.
-- GitHub Pages base-href and Firebase/local-data schemas remain unchanged.
+Cumulative contracts retained
+- V7.14.4 bidirectional GTD/PARA status drag behavior remains unchanged.
+- Journal delete/loading, Habit checkboxes, five-second messages, Focus/Tables naming, GitHub Pages base-href, Firebase sync, local database schema, and migration format remain unchanged.
 
 Local verification
-- Python repository contract suite: 164 tests passed, 0 failures (15 intentionally skipped retired native-companion contracts).
-- The cumulative root overlay is applied to a pristine V7.14.1 source copy and the full contract suite is rerun there.
-- ZIP structure is checked to ensure repository-root paths with no wrapper folder.
+- Python repository contract suite: 170 tests passed, 0 failures (15 intentionally skipped retired native-companion contracts).
+- `tools/brand_web.py` and the new V7.14.5 regression contract compile under Python.
 - Flutter/Dart SDK is not installed in this artifact environment; the actual Flutter web compile remains the preserved GitHub Actions workflow after upload.
 
-Version: 7.14.4+244
+Version: 7.14.5+245

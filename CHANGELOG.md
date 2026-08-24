@@ -1,3 +1,12 @@
+# V7.14.5 - Restored brand icon + simple stable Tables editor
+
+- Restored SlamDone's approved brand icon across the browser tab and installable PWA/taskbar path. The post-`flutter create` branding step now always recreates favicon, shortcut-icon, Apple touch icon, manifest, and theme-color links instead of depending on Flutter template defaults.
+- Added cache-busted icon/manifest URLs for this release so browsers and installed shortcuts can refresh the SlamDone identity instead of keeping the generic globe icon.
+- Simplified Tables to a bounded two-axis spreadsheet canvas with no nested `ListView`/expanded-row viewport. Repeated Add row and Add column actions grow the same grid without changing the surrounding SlamDone layout.
+- New rows are compact by default, while the existing bottom-edge row resize and right-edge column resize remain available. Text wraps inside the current cell size instead of using the previous expanding text-field layout path.
+- Selected data cells now support background color, text color, bold, and per-cell font size. Cell formatting is preserved when neighboring rows/columns are removed.
+- Preserved Excel/CSV import/export, table archive/delete, the V7.14.4 bidirectional GTD drag fix, Firebase/local database schemas, migration format, and every unrelated SlamDone feature.
+
 # V7.14.4 - Stable Tables grid + bidirectional GTD drag
 
 - Replaced the fragile Tables two-axis body with a bounded spreadsheet viewport: one horizontal canvas containing a fixed header and a bounded vertical `ListView`, eliminating the layout-recovery path triggered while growing tables.

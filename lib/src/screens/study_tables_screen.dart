@@ -233,7 +233,9 @@ class _EditableTable extends StatefulWidget {
 }
 
 class _EditableTableState extends State<_EditableTable> {
-  static const double _tableHeaderHeight = 58.0;
+  static const double _tableHeaderHeight = 48.0;
+  static const double _defaultRowHeight = 42.0;
+  static const double _defaultColumnWidth = 180.0;
 
   late List<String> columns;
   late List<List<String>> rows;
@@ -291,10 +293,10 @@ class _EditableTableState extends State<_EditableTable> {
     columns = [...widget.table.columns];
     rows = widget.table.rows.map((row) => [...row]).toList();
     if (!keepWidths || columnWidths.length != columns.length) {
-      columnWidths = List<double>.filled(columns.length, 180);
+      columnWidths = List<double>.filled(columns.length, _defaultColumnWidth);
     }
     if (!keepWidths || rowHeights.length != rows.length) {
-      rowHeights = List<double>.filled(rows.length, 54);
+      rowHeights = List<double>.filled(rows.length, _defaultRowHeight);
     }
     _normalizeGridShape();
     if (_selectedColumnIndex != null &&
@@ -308,7 +310,7 @@ class _EditableTableState extends State<_EditableTable> {
       columns.add('Column 1');
     }
     while (columnWidths.length < columns.length) {
-      columnWidths.add(180);
+      columnWidths.add(_defaultColumnWidth);
     }
     if (columnWidths.length > columns.length) {
       columnWidths.removeRange(columns.length, columnWidths.length);
@@ -322,7 +324,7 @@ class _EditableTableState extends State<_EditableTable> {
       }
     }
     while (rowHeights.length < rows.length) {
-      rowHeights.add(54);
+      rowHeights.add(_defaultRowHeight);
     }
     if (rowHeights.length > rows.length) {
       rowHeights.removeRange(rows.length, rowHeights.length);
@@ -365,13 +367,13 @@ class _EditableTableState extends State<_EditableTable> {
             columns.length,
             (index) => index < savedWidths.length
                 ? savedWidths[index].clamp(90, 520).toDouble()
-                : 180,
+                : _defaultColumnWidth,
           );
           rowHeights = List<double>.generate(
             rows.length,
             (index) => index < savedRowHeights.length
                 ? savedRowHeights[index].clamp(38, 360).toDouble()
-                : 54,
+                : _defaultRowHeight,
           );
           cellFormats = savedFormats;
           _normalizeGridShape();
@@ -380,8 +382,8 @@ class _EditableTableState extends State<_EditableTable> {
       } catch (_) {}
     }
     setState(() {
-      columnWidths = List<double>.filled(columns.length, 180);
-      rowHeights = List<double>.filled(rows.length, 54);
+      columnWidths = List<double>.filled(columns.length, _defaultColumnWidth);
+      rowHeights = List<double>.filled(rows.length, _defaultRowHeight);
       cellFormats = <String, Map<String, Object?>>{};
       _normalizeGridShape();
     });
@@ -421,36 +423,106 @@ class _EditableTableState extends State<_EditableTable> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 FilterChip(
-                  tooltip: 'Bold cell',
-                  label: const Text('Bold cell'),
+                  tooltip: 'Bold selected cell',
+                  label: const Text('Bold'),
                   selected: _selectedCellFormat['bold'] == true,
                   onSelected: _selectedRowIndex == null || _selectedCellColumnIndex == null
                       ? null
                       : (value) => _setSelectedCellFormat('bold', value),
                 ),
-                PopupMenuButton<int?>(
+                PopupMenuButton<int>(
                   enabled: _selectedRowIndex != null && _selectedCellColumnIndex != null,
-                  tooltip: 'Cell color',
+                  tooltip: 'Background color for selected cell',
                   onSelected: (value) => _setSelectedCellFormat('bg', value),
                   itemBuilder: (context) => [
-                    const PopupMenuItem<int?>(value: null, child: Text('Cell color: none')),
+                    const PopupMenuItem<int>(value: 0, child: Text('Background: none')),
                     for (final color in const <Color>[
                       Color(0xFFFFF59D),
                       Color(0xFFC8E6C9),
                       Color(0xFFBBDEFB),
                       Color(0xFFF8BBD0),
                       Color(0xFFD1C4E9),
+                      Color(0xFFFFCCBC),
                     ])
-                      PopupMenuItem<int?>(
+                      PopupMenuItem<int>(
                         value: color.toARGB32(),
-                        child: Row(children: [
-                          Container(width: 20, height: 20, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
-                          const SizedBox(width: 8),
-                          const Text('Cell color'),
-                        ]),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('Background color'),
+                          ],
+                        ),
                       ),
                   ],
-                  child: const Chip(avatar: Icon(Icons.format_color_fill, size: 18), label: Text('Cell color')),
+                  child: const Chip(
+                    avatar: Icon(Icons.format_color_fill, size: 18),
+                    label: Text('Cell color'),
+                  ),
+                ),
+                PopupMenuButton<int>(
+                  enabled: _selectedRowIndex != null && _selectedCellColumnIndex != null,
+                  tooltip: 'Text color for selected cell',
+                  onSelected: (value) => _setSelectedCellFormat('fg', value),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem<int>(value: 0, child: Text('Text color: default')),
+                    for (final color in const <Color>[
+                      Color(0xFF111827),
+                      Color(0xFFFFFFFF),
+                      Color(0xFF0B57D0),
+                      Color(0xFF147D32),
+                      Color(0xFFC62828),
+                      Color(0xFF6A1B9A),
+                      Color(0xFFEF6C00),
+                    ])
+                      PopupMenuItem<int>(
+                        value: color.toARGB32(),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('Text color'),
+                          ],
+                        ),
+                      ),
+                  ],
+                  child: const Chip(
+                    avatar: Icon(Icons.format_color_text, size: 18),
+                    label: Text('Text color'),
+                  ),
+                ),
+                PopupMenuButton<double>(
+                  enabled: _selectedRowIndex != null && _selectedCellColumnIndex != null,
+                  tooltip: 'Font size for selected cell',
+                  onSelected: (value) => _setSelectedCellFormat('fontSize', value),
+                  itemBuilder: (context) => [
+                    PopupMenuItem<double>(
+                      value: 0,
+                      child: Text('Default (${fontSize.round()})'),
+                    ),
+                    for (final size in const <double>[10, 12, 14, 16, 18, 20, 24, 28])
+                      PopupMenuItem<double>(value: size, child: Text('${size.round()} pt')),
+                  ],
+                  child: Chip(
+                    avatar: const Icon(Icons.format_size, size: 18),
+                    label: Text('Cell font ${_selectedCellFontSize.round()}'),
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _addColumn(controller),
@@ -489,27 +561,6 @@ class _EditableTableState extends State<_EditableTable> {
                   onPressed: () => _exportExcel(context),
                   icon: const Icon(Icons.grid_on),
                   label: const Text('Excel'),
-                ),
-                SizedBox(
-                  width: 210,
-                  child: Row(
-                    children: [
-                      const Text('Font'),
-                      Expanded(
-                        child: Slider(
-                          value: fontSize,
-                          min: 9,
-                          max: 28,
-                          divisions: 19,
-                          label: fontSize.round().toString(),
-                          onChanged: (value) =>
-                              setState(() => fontSize = value),
-                          onChangeEnd: (_) => _savePreferences(),
-                        ),
-                      ),
-                      Text('${fontSize.round()}'),
-                    ],
-                  ),
                 ),
                 FilterChip(
                   label: const Text('Wrap text'),
@@ -552,51 +603,51 @@ class _EditableTableState extends State<_EditableTable> {
             : totalWidth;
         final viewportHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight
-            : 600.0;
-        final canvasWidth = totalWidth < viewportWidth
-            ? viewportWidth
-            : totalWidth;
-        if (viewportHeight <= 0) return const SizedBox.shrink();
-        return Scrollbar(
-          controller: _horizontalController,
-          thumbVisibility: true,
-          scrollbarOrientation: ScrollbarOrientation.bottom,
+            : 560.0;
+        if (viewportWidth <= 0 || viewportHeight <= 0) {
+          return const SizedBox.shrink();
+        }
+        final canvasWidth = totalWidth < viewportWidth ? viewportWidth : totalWidth;
+        return ClipRect(
           child: SingleChildScrollView(
             controller: _horizontalController,
             scrollDirection: Axis.horizontal,
             child: SizedBox(
               width: canvasWidth,
               height: viewportHeight,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _buildHeaderRow(controller),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Scrollbar(
-                      controller: _verticalController,
-                      thumbVisibility: true,
-                      child: ListView.builder(
-                        controller: _verticalController,
-                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 28),
-                        itemCount: rows.length,
-                        itemBuilder: (context, rowIndex) =>
-                            _buildDataRow(controller, rowIndex),
-                      ),
-                    ),
-                  ),
-                ],
+              child: SingleChildScrollView(
+                controller: _verticalController,
+                scrollDirection: Axis.vertical,
+                child: _buildSpreadsheetGrid(controller),
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSpreadsheetGrid(AppController controller) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeaderRow(controller),
+          const SizedBox(height: 2),
+          for (var rowIndex = 0; rowIndex < rows.length; rowIndex++)
+            _buildDataRow(controller, rowIndex),
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No rows yet. Choose Add row to start entering data.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -716,12 +767,19 @@ class _EditableTableState extends State<_EditableTable> {
   ) {
     final key = '$rowIndex:$columnIndex';
     final format = cellFormats[key] ?? const <String, Object?>{};
-    final selected = _selectedRowIndex == rowIndex && _selectedCellColumnIndex == columnIndex;
+    final selected = _selectedRowIndex == rowIndex &&
+        _selectedCellColumnIndex == columnIndex;
     final bgValue = format['bg'];
-    final background = bgValue is int ? Color(bgValue) : null;
+    final fgValue = format['fg'];
+    final cellFontValue = format['fontSize'];
+    final background = bgValue is int && bgValue != 0 ? Color(bgValue) : null;
+    final foreground = fgValue is int && fgValue != 0 ? Color(fgValue) : null;
+    final cellFontSize = cellFontValue is num
+        ? cellFontValue.toDouble().clamp(9, 28).toDouble()
+        : fontSize;
     return Container(
       width: columnWidths[columnIndex],
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: background,
         border: Border.all(
@@ -734,14 +792,16 @@ class _EditableTableState extends State<_EditableTable> {
       child: TextFormField(
         key: ValueKey('${widget.table.id}-$rowIndex-$columnIndex'),
         initialValue: rows[rowIndex][columnIndex],
-        expands: wrapText,
-        minLines: wrapText ? null : 1,
+        minLines: 1,
         maxLines: wrapText ? null : 1,
         textAlignVertical: TextAlignVertical.top,
         style: TextStyle(
-          fontSize: fontSize,
-          height: 1.25,
-          fontWeight: format['bold'] == true ? FontWeight.w800 : FontWeight.normal,
+          color: foreground,
+          fontSize: cellFontSize,
+          height: 1.15,
+          fontWeight: format['bold'] == true
+              ? FontWeight.w800
+              : FontWeight.normal,
         ),
         onTap: () => setState(() {
           _selectedRowIndex = rowIndex;
@@ -754,7 +814,7 @@ class _EditableTableState extends State<_EditableTable> {
         decoration: const InputDecoration(
           border: InputBorder.none,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
         ),
       ),
     );
@@ -763,7 +823,7 @@ class _EditableTableState extends State<_EditableTable> {
   void _addColumn(AppController controller) {
     setState(() {
       columns.add('Column ${columns.length + 1}');
-      columnWidths.add(180);
+      columnWidths.add(_defaultColumnWidth);
       for (final row in rows) {
         row.add('');
       }
@@ -777,7 +837,7 @@ class _EditableTableState extends State<_EditableTable> {
   void _addRow(AppController controller) {
     setState(() {
       rows.add(List<String>.filled(columns.length, ''));
-      rowHeights.add(54);
+      rowHeights.add(_defaultRowHeight);
       _normalizeGridShape();
       _selectedRowIndex = rows.length - 1;
       _selectedCellColumnIndex = columns.isEmpty ? null : 0;
@@ -800,6 +860,14 @@ class _EditableTableState extends State<_EditableTable> {
     return cellFormats['$row:$col'] ?? const <String, Object?>{};
   }
 
+  double get _selectedCellFontSize {
+    final value = _selectedCellFormat['fontSize'];
+    if (value is num && value > 0) {
+      return value.toDouble().clamp(9, 28).toDouble();
+    }
+    return fontSize;
+  }
+
   void _setSelectedCellFormat(String key, Object? value) {
     final row = _selectedRowIndex;
     final col = _selectedCellColumnIndex;
@@ -807,7 +875,8 @@ class _EditableTableState extends State<_EditableTable> {
     final cellKey = '$row:$col';
     setState(() {
       final next = Map<String, Object?>.from(cellFormats[cellKey] ?? const <String, Object?>{});
-      if (value == null || value == false) {
+      final clearSentinel = value is num && value == 0;
+      if (value == null || value == false || clearSentinel) {
         next.remove(key);
       } else {
         next[key] = value;
@@ -836,6 +905,21 @@ class _EditableTableState extends State<_EditableTable> {
     _selectedCellColumnIndex = null;
   }
 
+  void _removeColumnFormats(int removedColumn) {
+    final next = <String, Map<String, Object?>>{};
+    for (final entry in cellFormats.entries) {
+      final parts = entry.key.split(':');
+      if (parts.length != 2) continue;
+      final row = int.tryParse(parts[0]);
+      final col = int.tryParse(parts[1]);
+      if (row == null || col == null || col == removedColumn) continue;
+      next['$row:${col > removedColumn ? col - 1 : col}'] = entry.value;
+    }
+    cellFormats = next;
+    _selectedRowIndex = null;
+    _selectedCellColumnIndex = null;
+  }
+
   void _deleteColumn(AppController controller, int columnIndex) {
     if (columnIndex < 0 || columnIndex >= columns.length) return;
     if (columns.length == 1) {
@@ -852,9 +936,7 @@ class _EditableTableState extends State<_EditableTable> {
       for (final row in rows) {
         if (columnIndex < row.length) row.removeAt(columnIndex);
       }
-      cellFormats.clear();
-      _selectedRowIndex = null;
-      _selectedCellColumnIndex = null;
+      _removeColumnFormats(columnIndex);
       _normalizeGridShape();
       if (columns.isEmpty) {
         _selectedColumnIndex = null;
@@ -937,6 +1019,7 @@ class _EditableTableState extends State<_EditableTable> {
         for (final row in rows) {
           if (index < row.length) row.removeAt(index);
         }
+        _removeColumnFormats(index);
       }
       _selectedColumnIndex = null;
       _normalizeGridShape();
