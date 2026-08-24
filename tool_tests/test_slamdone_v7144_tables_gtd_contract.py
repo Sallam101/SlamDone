@@ -68,7 +68,7 @@ class SlamDoneV7144TablesGtdContractTest(unittest.TestCase):
 
     def test_release_version_is_7144(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:4\+244|5\+245)\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:4\+244|5\+245|6\+246)\s*$')
 
 
 if __name__ == '__main__':

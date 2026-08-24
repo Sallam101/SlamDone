@@ -1,4 +1,4 @@
-SlamDone V7.14.5 — GitHub root overlay
+SlamDone V7.14.6 — GitHub root overlay
 
 1. Extract `SlamDone_V7_14_5_BRAND_TABLES_ROOT_OVERLAY.zip`.
 2. Open the extracted folder. You should immediately see `lib`, `web`, `assets`, `tools`, `tool_tests`, `pubspec.yaml`, and documentation files. There is no wrapper folder.
@@ -9,4 +9,4 @@ SlamDone V7.14.5 — GitHub root overlay
 
 No database, Firebase schema, migration payload, or personal progress file is included.
 
-Version: 7.14.5+245
+Version: 7.14.6+246

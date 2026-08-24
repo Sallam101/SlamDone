@@ -1,3 +1,11 @@
+# V7.14.6 - Windows taskbar brand icon hardening
+
+- Added explicit Windows PWA/taskbar icon sizes from 16px through 256px, including 44px app icon and common target sizes.
+- Added a multi-resolution `favicon.ico` plus explicit 16/32/48 favicon links for the running desktop window.
+- Added stable manifest app identity `/SlamDone/` while retaining the existing `/SlamDone/` GitHub Pages launch path.
+- Updated `tools/brand_web.py` so all Windows icon files and manifest metadata are restored after GitHub Actions runs `flutter create`.
+- Branding-only corrective patch: no Dart feature, Firebase, SQLite, Tables, GTD/PARA, or progress-data behavior changes.
+
 # V7.14.5 - Restored brand icon + simple stable Tables editor
 
 - Restored SlamDone's approved brand icon across the browser tab and installable PWA/taskbar path. The post-`flutter create` branding step now always recreates favicon, shortcut-icon, Apple touch icon, manifest, and theme-color links instead of depending on Flutter template defaults.

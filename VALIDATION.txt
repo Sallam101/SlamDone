@@ -1,8 +1,8 @@
-SlamDone V7.14.5 Brand Icon + Simple Tables Corrective Hotfix — validation targets
+SlamDone V7.14.6 Brand Icon + Simple Tables Corrective Hotfix — validation targets
 
-New V7.14.5 regression contracts
+New V7.14.6 regression contracts
 - The post-Flutter-create branding script recreates browser favicon, shortcut icon, Apple touch icon, PWA manifest, and theme-color links even when the generated index starts without them.
-- Favicon and manifest/icon URLs are cache-busted with the V7.14.5 token.
+- Favicon and manifest/icon URLs are cache-busted with the V7.14.6 token.
 - The manifest is created when missing and includes SlamDone 192/512 normal + maskable icons.
 - Tables use two bounded axis scroll views around one content-sized spreadsheet grid with no nested ListView/Expanded body.
 - Add row and Add column remain repeatable and normalize grid dimensions.
@@ -17,7 +17,7 @@ Cumulative contracts retained
 
 Local verification
 - Python repository contract suite: 170 tests passed, 0 failures (15 intentionally skipped retired native-companion contracts).
-- `tools/brand_web.py` and the new V7.14.5 regression contract compile under Python.
+- `tools/brand_web.py` and the new V7.14.6 regression contract compile under Python.
 - Flutter/Dart SDK is not installed in this artifact environment; the actual Flutter web compile remains the preserved GitHub Actions workflow after upload.
 
-Version: 7.14.5+245
+Version: 7.14.6+246

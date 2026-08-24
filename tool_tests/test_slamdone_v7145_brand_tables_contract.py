@@ -16,11 +16,14 @@ class SlamDoneV7145BrandTablesContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             temp = Path(td)
             (temp / 'tools').mkdir()
-            (temp / 'assets' / 'branding').mkdir(parents=True)
+            (temp / 'assets' / 'branding' / 'windows').mkdir(parents=True)
             (temp / 'web').mkdir()
             shutil.copy2(ROOT / 'tools' / 'brand_web.py', temp / 'tools' / 'brand_web.py')
             shutil.copy2(ROOT / 'assets' / 'branding' / 'slamdone_app_icon.png', temp / 'assets' / 'branding' / 'slamdone_app_icon.png')
             shutil.copy2(ROOT / 'assets' / 'branding' / 'slamdone_app_icon_192.png', temp / 'assets' / 'branding' / 'slamdone_app_icon_192.png')
+            for source in (ROOT / 'assets' / 'branding' / 'windows').iterdir():
+                if source.is_file():
+                    shutil.copy2(source, temp / 'assets' / 'branding' / 'windows' / source.name)
             (temp / 'web' / 'index.html').write_text(
                 '<!doctype html><html><head><base href="$FLUTTER_BASE_HREF"><title>slamdone</title></head>'
                 '<body><script src="flutter_bootstrap.js" async></script></body></html>',
@@ -37,9 +40,9 @@ class SlamDoneV7145BrandTablesContractTest(unittest.TestCase):
             self.assertIn('rel="apple-touch-icon"', index)
             self.assertIn('rel="manifest"', index)
             self.assertIn('name="theme-color"', index)
-            self.assertIn('favicon.png?v=7145', index)
-            self.assertIn('manifest.json?v=7145', index)
-            self.assertTrue(all('?v=7145' in icon['src'] for icon in manifest['icons']))
+            self.assertIn('favicon.ico?v=7146', index)
+            self.assertIn('manifest.json?v=7146', index)
+            self.assertTrue(all('?v=7146' in icon['src'] for icon in manifest['icons']))
 
     def test_tables_use_simple_two_axis_content_grid_without_nested_listview(self):
         src = self.read('lib/src/screens/study_tables_screen.dart')
@@ -83,8 +86,8 @@ class SlamDoneV7145BrandTablesContractTest(unittest.TestCase):
         self.assertIn('maxLines: wrapText ? null : 1', cell)
         self.assertIn('textAlignVertical: TextAlignVertical.top', cell)
 
-    def test_release_version_is_7145(self):
-        self.assertIn('version: 7.14.5+245', self.read('pubspec.yaml'))
+    def test_release_version_is_7146(self):
+        self.assertIn('version: 7.14.6+246', self.read('pubspec.yaml'))
 
 
 if __name__ == '__main__':

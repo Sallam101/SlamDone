@@ -9,6 +9,8 @@ web.mkdir(parents=True, exist_ok=True)
 
 approved_icon = root / 'assets' / 'branding' / 'slamdone_app_icon.png'
 approved_icon_192 = root / 'assets' / 'branding' / 'slamdone_app_icon_192.png'
+windows_icon_source_dir = root / 'assets' / 'branding' / 'windows'
+WINDOWS_TASKBAR_ICON_SIZES = (16, 20, 24, 30, 32, 36, 40, 44, 48, 55, 60, 64, 66, 72, 80, 88, 96, 176, 256)
 icons_dir = web / 'icons'
 icons_dir.mkdir(parents=True, exist_ok=True)
 if approved_icon.exists():
@@ -18,6 +20,13 @@ if approved_icon.exists():
 if approved_icon_192.exists():
     shutil.copyfile(approved_icon_192, icons_dir / 'Icon-192.png')
     shutil.copyfile(approved_icon_192, icons_dir / 'Icon-maskable-192.png')
+for size in WINDOWS_TASKBAR_ICON_SIZES:
+    source = windows_icon_source_dir / f'Icon-{size}.png'
+    if source.exists():
+        shutil.copyfile(source, icons_dir / source.name)
+ico_source = windows_icon_source_dir / 'favicon.ico'
+if ico_source.exists():
+    shutil.copyfile(ico_source, web / 'favicon.ico')
 
 mark = web / 'slamdone-mark.svg'
 mark.write_text('''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
@@ -35,20 +44,25 @@ try:
     data = json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else {}
 except (json.JSONDecodeError, OSError):
     data = {}
+windows_icons = [
+    {'src': f'icons/Icon-{size}.png?v=7146', 'sizes': f'{size}x{size}', 'type': 'image/png', 'purpose': 'any'}
+    for size in WINDOWS_TASKBAR_ICON_SIZES
+]
 data.update({
     'name': 'SlamDone',
     'short_name': 'SlamDone',
+    'id': '/SlamDone/',
     'description': 'SlamDone — STOP PLANNING. START FINISHING.',
     'display': 'standalone',
     'start_url': '.',
     'scope': '.',
     'background_color': '#090D12',
     'theme_color': '#78D12F',
-    'icons': [
-        {'src': 'icons/Icon-192.png?v=7145', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
-        {'src': 'icons/Icon-512.png?v=7145', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
-        {'src': 'icons/Icon-maskable-192.png?v=7145', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'maskable'},
-        {'src': 'icons/Icon-maskable-512.png?v=7145', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
+    'icons': windows_icons + [
+        {'src': 'icons/Icon-192.png?v=7146', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
+        {'src': 'icons/Icon-512.png?v=7146', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+        {'src': 'icons/Icon-maskable-192.png?v=7146', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'maskable'},
+        {'src': 'icons/Icon-maskable-512.png?v=7146', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
     ],
 })
 manifest_path.write_text(json.dumps(data, indent=2), encoding='utf-8')
@@ -413,10 +427,14 @@ if index.exists():
     text = re.sub(r'\s*<link[^>]+rel=["\'][^"\']*(?:icon|manifest)[^"\']*["\'][^>]*>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\s*<meta[^>]+name=["\']theme-color["\'][^>]*>', '', text, flags=re.IGNORECASE)
     brand_links = '''
-  <link rel="icon" type="image/png" sizes="512x512" href="favicon.png?v=7145">
-  <link rel="shortcut icon" type="image/png" href="favicon.png?v=7145">
-  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png?v=7145">
-  <link rel="manifest" href="manifest.json?v=7145">
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=7146">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/Icon-16.png?v=7146">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/Icon-32.png?v=7146">
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/Icon-48.png?v=7146">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png?v=7146">
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico?v=7146">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png?v=7146">
+  <link rel="manifest" href="manifest.json?v=7146">
   <meta name="theme-color" content="#78D12F">
 '''
     text = text.replace('</head>', f'{brand_links}</head>')

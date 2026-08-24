@@ -1,4 +1,4 @@
-SlamDone V7.14.5 — BRAND ICON + SIMPLE TABLES CORRECTIVE HOTFIX
+SlamDone V7.14.6 — BRAND ICON + SIMPLE TABLES CORRECTIVE HOTFIX
 
 Use the ROOT overlay ZIP on the current V7.14.x GitHub repository.
 Upload the extracted contents directly into the repository root and replace matching files.
@@ -11,4 +11,4 @@ This release keeps all previous V7.14.x fixes and adds:
 - wrapped text inside resized cells
 - selected-cell background color, text color, bold, and font size
 
-Version: 7.14.5+245
+Version: 7.14.6+246

@@ -18,6 +18,10 @@ Production URL after Pages is enabled:
 The planner UI writes to local SQLite first. SlamDone then queues changed records for Firestore. Cloud records merge back into local SQLite using the existing Autivra ordering: higher revision, then newer `client_updated_at`, then device ID as deterministic tie-break.
 
 
+## V7.14.6 Windows taskbar icon hardening
+
+V7.14.6 adds Windows-specific small PWA icons, a multi-resolution favicon.ico, explicit small favicon links, and a stable `/SlamDone/` manifest identity so the installed/running app has branded icon assets available for Taskbar, Start, Alt+Tab, and other Windows surfaces.
+
 ## V7.14.5 browser identity and Tables stability
 
 - SlamDone's approved icon is explicitly re-applied after GitHub Actions regenerates the Flutter web shell, including favicon, PWA manifest icons, Apple touch icon, and theme color. Icon URLs are versioned so Chrome/Edge and Windows shortcuts can refresh stale cached branding.
