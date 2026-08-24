@@ -615,6 +615,45 @@ class _YearWeeks extends StatefulWidget {
 
 class _YearWeeksState extends State<_YearWeeks> {
   int? _hoveredWeek;
+  final ScrollController _scrollController = ScrollController();
+  String? _lastAutoScrollKey;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _YearWeeks oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.year != widget.year || oldWidget.size != widget.size) {
+      _lastAutoScrollKey = null;
+    }
+  }
+
+  void _scheduleCurrentWeekScroll({
+    required int crossAxisCount,
+    required double cardHeight,
+  }) {
+    final now = DateTime.now();
+    if (widget.year != isoWeekYear(now)) return;
+    final scrollKey = '${widget.year}|${widget.size}|$crossAxisCount';
+    if (_lastAutoScrollKey == scrollKey) return;
+    _lastAutoScrollKey = scrollKey;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        _lastAutoScrollKey = null;
+        return;
+      }
+      final currentWeekIndex = isoWeekNumber(now) - 1;
+      final currentWeekRow = currentWeekIndex ~/ crossAxisCount;
+      final target = (currentWeekRow * (cardHeight + 8.0))
+          .clamp(0.0, _scrollController.position.maxScrollExtent)
+          .toDouble();
+      _scrollController.jumpTo(target);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -644,8 +683,17 @@ class _YearWeeksState extends State<_YearWeeks> {
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
     final cardHeight = baseHeight * textScale.clamp(1.0, 1.45);
 
-    return CustomScrollView(
-      slivers: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount =
+            (constraints.maxWidth / (extent + 8.0)).ceil().clamp(1, 12).toInt();
+        _scheduleCurrentWeekScroll(
+          crossAxisCount: crossAxisCount,
+          cardHeight: cardHeight,
+        );
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
         SliverToBoxAdapter(
           child: Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -817,7 +865,9 @@ class _YearWeeksState extends State<_YearWeeks> {
             ),
           ),
         ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

@@ -287,6 +287,26 @@ class _LiveTimerCard extends StatelessWidget {
   }
 }
 
+const _focusUndoLifetime = Duration(minutes: 5);
+
+void _showFocusUndoSnackBar(
+  BuildContext context, {
+  required String message,
+  required VoidCallback onUndo,
+}) {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  final snackController = messenger.showSnackBar(
+    SnackBar(
+      duration: _focusUndoLifetime,
+      content: Text(message),
+      action: SnackBarAction(label: 'Undo', onPressed: onUndo),
+    ),
+  );
+  final expiryTimer = Timer(_focusUndoLifetime, snackController.close);
+  snackController.closed.whenComplete(expiryTimer.cancel);
+}
+
 class _DailyGoalPanel extends StatelessWidget {
   const _DailyGoalPanel({required this.controller});
 
@@ -296,16 +316,12 @@ class _DailyGoalPanel extends StatelessWidget {
     final session = await controller.addManualFocusSession();
     if (!context.mounted) return;
     final minutes = (session.elapsedSeconds / 60).round();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Logged $minutes min manual focus.'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            unawaited(controller.removeFocusSession(session.id));
-          },
-        ),
-      ),
+    _showFocusUndoSnackBar(
+      context,
+      message: 'Logged $minutes min manual focus.',
+      onUndo: () {
+        unawaited(controller.removeFocusSession(session.id));
+      },
     );
   }
 
@@ -315,16 +331,12 @@ class _DailyGoalPanel extends StatelessWidget {
   ) async {
     final removed = await controller.removeFocusSession(session.id);
     if (removed == null || !context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Removed ${_exactFocusDuration(session.elapsedSeconds)}.'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            unawaited(controller.restoreFocusSession(session.id));
-          },
-        ),
-      ),
+    _showFocusUndoSnackBar(
+      context,
+      message: 'Removed ${_exactFocusDuration(session.elapsedSeconds)}.',
+      onUndo: () {
+        unawaited(controller.restoreFocusSession(session.id));
+      },
     );
   }
 

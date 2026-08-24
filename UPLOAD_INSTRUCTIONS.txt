@@ -1,9 +1,12 @@
-SlamDone V7.5.1 Big Picture Filter Toolbar Fix
+SlamDone V7.14.1 — Small usability patch
 
-1. Extract this ZIP.
-2. Upload the CONTENTS into the root of your existing Sallam101/SlamDone GitHub repository.
-3. Preserve the folders exactly (lib/src/screens and tool_tests).
-4. Commit directly to main.
-5. GitHub Actions will build/deploy automatically.
+UPLOAD TO THE EXISTING SlamDone GITHUB REPOSITORY ROOT.
 
-This patch does NOT include or change your database, Firebase config values, migration JSON, card renderer files, hierarchy layout files, or canvas card structure.
+1. Extract this ZIP on your PC.
+2. Open the extracted SlamDone_V7_14_1_USABILITY_SMALL_PATCH folder.
+3. Upload/drag the CONTENTS of that folder into the ROOT of the existing SlamDone GitHub repository.
+4. Keep the folder paths exactly as included (lib/, tools/, web/, tool_tests/).
+5. Replace/overwrite the matching existing files when GitHub asks.
+6. Commit the upload and let the existing GitHub Pages workflow run.
+
+Do NOT delete or replace your private Autivra migration JSON/database/progress files. This patch does not change the Firebase schema or migration format.

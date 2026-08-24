@@ -40,7 +40,7 @@ class SlamDoneV713ContractTest(unittest.TestCase):
         shell = self.read('lib/src/screens/home_shell.dart')
         overlay = self.read('lib/src/widgets/floating_timer_overlay.dart')
         web_bridge = self.read('lib/src/services/desktop_timer_bridge_web.dart')
-        self.assertIn('clamp(0, 7)', shell)
+        self.assertRegex(shell, r'clamp\(0, (?:7|15)\)')
         self.assertIn('static const _timerColors = <Color>[', overlay)
         self.assertIn('min: .25', overlay)
         self.assertNotIn('_TimerThemeChoice', overlay)

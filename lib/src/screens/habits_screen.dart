@@ -13,18 +13,16 @@ class HabitsScreen extends StatefulWidget {
 }
 
 class _HabitsScreenState extends State<HabitsScreen> {
+  static const double _dayHeaderHeight = 60.0;
+
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _mobileDate = DateTime.now();
   final ScrollController _horizontal = ScrollController();
   final ScrollController _vertical = ScrollController();
   double? _nameWidth;
   final Map<String, double> _liveRowHeights = <String, double>{};
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
-  }
+  String? _lastTodayScrollMonthKey;
+  bool _todayScrollQueued = false;
 
   @override
   void dispose() {
@@ -33,15 +31,23 @@ class _HabitsScreenState extends State<HabitsScreen> {
     super.dispose();
   }
 
-  void _scrollToToday() {
-    if (!_horizontal.hasClients) return;
+  void _queueScrollToToday() {
     final now = DateTime.now();
-    if (now.year == _month.year && now.month == _month.month) {
-      final desired = ((now.day - 4) * 58.0)
-          .clamp(0, _horizontal.position.maxScrollExtent)
+    if (now.year != _month.year || now.month != _month.month) return;
+    final monthKey = '${_month.year}-${_month.month}';
+    if (_todayScrollQueued || _lastTodayScrollMonthKey == monthKey) return;
+    _todayScrollQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _todayScrollQueued = false;
+      if (!mounted || !_horizontal.hasClients) return;
+      final viewport = _horizontal.position.viewportDimension;
+      final todayCenter = (now.day - .5) * 58.0;
+      final desired = (todayCenter - viewport * .45)
+          .clamp(0.0, _horizontal.position.maxScrollExtent)
           .toDouble();
       _horizontal.jumpTo(desired);
-    }
+      _lastTodayScrollMonthKey = monthKey;
+    });
   }
 
   @override
@@ -54,6 +60,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
       return _buildMobileHabits(context, controller, habits);
     }
     final days = DateTime(_month.year, _month.month + 1, 0).day;
+    _queueScrollToToday();
     final prefix =
         '${_month.year.toString().padLeft(4, '0')}-${_month.month.toString().padLeft(2, '0')}';
     final entries = <String, double>{
@@ -180,7 +187,8 @@ class _HabitsScreenState extends State<HabitsScreen> {
                           child: Scrollbar(
                             controller: _horizontal,
                             thumbVisibility: true,
-                            scrollbarOrientation: ScrollbarOrientation.bottom,
+                            scrollbarOrientation: ScrollbarOrientation.top,
+                            crossAxisMargin: _dayHeaderHeight,
                             child: SingleChildScrollView(
                               controller: _horizontal,
                               scrollDirection: Axis.horizontal,
@@ -459,8 +467,10 @@ class _HabitsScreenState extends State<HabitsScreen> {
       value == value.roundToDouble() ? value.toInt().toString() : value.toStringAsFixed(1);
 
   void _changeMonth(int delta) {
-    setState(() => _month = DateTime(_month.year, _month.month + delta));
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
+    setState(() {
+      _month = DateTime(_month.year, _month.month + delta);
+      _lastTodayScrollMonthKey = null;
+    });
   }
 
   Future<void> _addHabit(BuildContext context) async {
@@ -927,7 +937,7 @@ class _HabitNamesColumn extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 60,
+            height: _HabitsScreenState._dayHeaderHeight,
             alignment: Alignment.centerLeft,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -1133,7 +1143,7 @@ class _DayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 60,
+      height: _HabitsScreenState._dayHeaderHeight,
       child: Row(
         children: List.generate(days, (index) {
           final date = DateTime(month.year, month.month, index + 1);

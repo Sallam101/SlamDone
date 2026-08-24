@@ -59,6 +59,52 @@ class _SlamDoneFloatingTimerOverlayState
     Color(0xFFEF6C00),
     Color(0xFF455A64),
     Color(0xFFAD1457),
+    Color(0xFF2E7D32),
+    Color(0xFF455A64),
+    Color(0xFF8D6E00),
+    Color(0xFF2E7D32),
+    Color(0xFF1565C0),
+    Color(0xFF6A1B9A),
+    Color(0xFFAD1457),
+    Color(0xFF7A6100),
+  ];
+
+  static const _timerBackgrounds = <Color?>[
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    Color(0xFFFFFDFC),
+    Color(0xFFF2F4F7),
+    Color(0xFFFFF4D6),
+    Color(0xFFE8F7EE),
+    Color(0xFFE9F4FF),
+    Color(0xFFF2ECFF),
+    Color(0xFFFFECEF),
+    Color(0xFFFFF8CC),
+  ];
+
+  static const _timerColorNames = <String>[
+    'SlamDone green',
+    'Blue',
+    'Teal',
+    'Purple',
+    'Red',
+    'Orange',
+    'Slate',
+    'Berry',
+    'White',
+    'Soft gray',
+    'Cream',
+    'Mint',
+    'Ice blue',
+    'Lavender',
+    'Blush',
+    'Pale yellow',
   ];
 
   _TimerDensity get _density {
@@ -75,102 +121,130 @@ class _SlamDoneFloatingTimerOverlayState
     final engine = widget.controller.timerEngine;
     final safeColorIndex = widget.colorIndex.clamp(0, _timerColors.length - 1).toInt();
     final accent = _timerColors[safeColorIndex];
+    final baseTheme = Theme.of(context);
+    final background =
+        _timerBackgrounds[safeColorIndex] ?? baseTheme.colorScheme.surface;
+    final foreground = background.computeLuminance() > .55
+        ? const Color(0xFF182019)
+        : baseTheme.colorScheme.onSurface;
+    final onAccent = accent.computeLuminance() > .55
+        ? const Color(0xFF182019)
+        : Colors.white;
+    final timerTheme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(
+        surface: background,
+        onSurface: foreground,
+        primary: accent,
+        onPrimary: onAccent,
+      ),
+      textTheme: baseTheme.textTheme.apply(
+        bodyColor: foreground,
+        displayColor: foreground,
+      ),
+      iconTheme: baseTheme.iconTheme.copyWith(color: foreground),
+    );
     final density = _density;
     final radius = density == _TimerDensity.mini ? 10.0 : 16.0;
 
-    return AnimatedOpacity(
-      opacity: widget.opacity.clamp(.25, 1).toDouble(),
-      duration: const Duration(milliseconds: 120),
-      child: Material(
-      elevation: 18,
-      borderRadius: BorderRadius.circular(radius),
-      clipBehavior: Clip.antiAlias,
-      color: Theme.of(context).colorScheme.surface,
-      child: SizedBox(
-        width: widget.size.width,
-        height: widget.size.height,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: engine,
-                builder: (context, _) => _buildTimerBody(
-                  context,
-                  engine: engine,
-                  accent: accent,
-                  density: density,
-                ),
-              ),
-            ),
-            if (_showOpacity)
-              Positioned(
-                left: 8,
-                right: 8,
-                top: density == _TimerDensity.mini ? 31 : 35,
-                child: Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(10),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: .96),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    child: Row(
-                      children: [
-                        Icon(Icons.opacity, size: 15, color: accent),
-                        Expanded(
-                          child: Slider(
-                            min: .25,
-                            max: 1,
-                            divisions: 15,
-                            value: widget.opacity.clamp(.25, 1).toDouble(),
-                            onChanged: widget.onOpacityChanged,
-                          ),
-                        ),
-                        Text(
-                          '${(widget.opacity.clamp(.25, 1) * 100).round()}%',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ],
+    return Theme(
+      data: timerTheme,
+      child: AnimatedOpacity(
+        opacity: widget.opacity.clamp(.25, 1).toDouble(),
+        duration: const Duration(milliseconds: 120),
+        child: Material(
+          elevation: 18,
+          borderRadius: BorderRadius.circular(radius),
+          clipBehavior: Clip.antiAlias,
+          color: background,
+          child: SizedBox(
+            width: widget.size.width,
+            height: widget.size.height,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: engine,
+                    builder: (context, _) => _buildTimerBody(
+                      context,
+                      engine: engine,
+                      accent: accent,
+                      density: density,
                     ),
                   ),
                 ),
-              ),
-            // Edge handles avoid forcing the pointer into one tiny corner and
-            // feel much smoother on mouse/trackpad than a single drag target.
-            Positioned(
-              right: 0,
-              top: density == _TimerDensity.mini ? 28 : 32,
-              bottom: 22,
-              width: 10,
-              child: _resizeHandle(
-                axis: _TimerResizeAxis.horizontal,
-                accent: accent,
-              ),
+                if (_showOpacity)
+                  Positioned(
+                    left: 8,
+                    right: 8,
+                    top: density == _TimerDensity.mini ? 31 : 35,
+                    child: Material(
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(10),
+                      color: background.withValues(alpha: .96),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.opacity, size: 15, color: accent),
+                            Expanded(
+                              child: Slider(
+                                min: .25,
+                                max: 1,
+                                divisions: 15,
+                                value: widget.opacity.clamp(.25, 1).toDouble(),
+                                onChanged: widget.onOpacityChanged,
+                              ),
+                            ),
+                            Text(
+                              '${(widget.opacity.clamp(.25, 1) * 100).round()}%',
+                              style: timerTheme.textTheme.labelSmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                // Edge handles avoid forcing the pointer into one tiny corner and
+                // feel much smoother on mouse/trackpad than a single drag target.
+                Positioned(
+                  right: 0,
+                  top: density == _TimerDensity.mini ? 28 : 32,
+                  bottom: 22,
+                  width: 10,
+                  child: _resizeHandle(
+                    axis: _TimerResizeAxis.horizontal,
+                    accent: accent,
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 22,
+                  bottom: 0,
+                  height: 10,
+                  child: _resizeHandle(
+                    axis: _TimerResizeAxis.vertical,
+                    accent: accent,
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  width: 30,
+                  height: 30,
+                  child: _resizeHandle(
+                    axis: _TimerResizeAxis.both,
+                    accent: accent,
+                    showGrip: true,
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              left: 0,
-              right: 22,
-              bottom: 0,
-              height: 10,
-              child: _resizeHandle(
-                axis: _TimerResizeAxis.vertical,
-                accent: accent,
-              ),
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              width: 30,
-              height: 30,
-              child: _resizeHandle(
-                axis: _TimerResizeAxis.both,
-                accent: accent,
-                showGrip: true,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -331,12 +405,16 @@ class _SlamDoneFloatingTimerOverlayState
                             width: 18,
                             height: 18,
                             decoration: BoxDecoration(
-                              color: _timerColors[index],
+                              color: _timerBackgrounds[index] ?? _timerColors[index],
                               shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _timerColors[index],
+                                width: 2,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(index == 0 ? 'SlamDone green' : 'Color ${index + 1}'),
+                          Text(_timerColorNames[index]),
                         ],
                       ),
                     ),

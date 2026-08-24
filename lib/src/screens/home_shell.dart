@@ -375,7 +375,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                             _pushDesktopTimerSnapshot();
                           },
                           onColorChanged: (value) {
-                            setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
+                            setState(() => _floatingTimerColorIndex = value.clamp(0, 15).toInt());
                             _pushDesktopTimerSnapshot();
                           },
                           onPinnedChanged: (value) {
@@ -591,7 +591,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (rawAction.startsWith('color:')) {
       final value = int.tryParse(rawAction.substring('color:'.length));
       if (value != null && mounted) {
-        setState(() => _floatingTimerColorIndex = value.clamp(0, 7).toInt());
+        setState(() => _floatingTimerColorIndex = value.clamp(0, 15).toInt());
         _pushDesktopTimerSnapshot();
       }
       return;

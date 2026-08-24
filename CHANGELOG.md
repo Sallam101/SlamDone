@@ -1,3 +1,11 @@
+# V7.14.1 - Current-week, habit navigation, Undo timeout + light timer themes
+
+- 52 Weeks now opens on the current week row for the current ISO year instead of starting at Week 1.
+- Habit Month moves the horizontal day scrollbar directly below the day header and automatically positions the current month around today's column on first view/month return.
+- Manual focus log/remove Undo snackbars now have a hard five-minute lifetime, including an explicit close timer so they cannot remain indefinitely.
+- Floating timer keeps the original eight accent choices and adds eight light full-background choices: White, Soft gray, Cream, Mint, Ice blue, Lavender, Blush, and Pale yellow. The browser Picture-in-Picture timer uses the same 16-choice palette.
+- Preserved the V7.14 focus ledger, Firebase schema, Autivra migration format, planner hierarchy, browser-only GitHub Pages deployment, NorthStar, and Rewards data.
+
 # V7.14.0 - Focus accuracy + Uncategorized visibility
 
 - Added selected-by-default **Uncategorized** visibility chips to Big Picture and Mind Map. Hiding them is view-only and does not delete, archive, move, or rewrite stored layouts.

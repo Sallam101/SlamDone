@@ -98,7 +98,7 @@ class SlamDoneV714ContractTest(unittest.TestCase):
         pubspec = self.read('pubspec.yaml')
         workflow = self.read('.github/workflows/pages.yml')
         support = self.read('lib/src/services/support_links_web.dart')
-        self.assertIn('version: 7.14.0+240', pubspec)
+        self.assertIn('version: 7.14.1+241', pubspec)
         self.assertNotIn('windows-latest', workflow)
         self.assertNotIn('companion:', workflow)
         self.assertIn('flutter build web --release --base-href /SlamDone/', workflow)
