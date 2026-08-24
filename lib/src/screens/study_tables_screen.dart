@@ -296,9 +296,36 @@ class _EditableTableState extends State<_EditableTable> {
     if (!keepWidths || rowHeights.length != rows.length) {
       rowHeights = List<double>.filled(rows.length, 54);
     }
+    _normalizeGridShape();
     if (_selectedColumnIndex != null &&
         _selectedColumnIndex! >= columns.length) {
       _selectedColumnIndex = columns.isEmpty ? null : columns.length - 1;
+    }
+  }
+
+  void _normalizeGridShape() {
+    if (columns.isEmpty) {
+      columns.add('Column 1');
+    }
+    while (columnWidths.length < columns.length) {
+      columnWidths.add(180);
+    }
+    if (columnWidths.length > columns.length) {
+      columnWidths.removeRange(columns.length, columnWidths.length);
+    }
+    for (final row in rows) {
+      while (row.length < columns.length) {
+        row.add('');
+      }
+      if (row.length > columns.length) {
+        row.removeRange(columns.length, row.length);
+      }
+    }
+    while (rowHeights.length < rows.length) {
+      rowHeights.add(54);
+    }
+    if (rowHeights.length > rows.length) {
+      rowHeights.removeRange(rows.length, rowHeights.length);
     }
   }
 
@@ -347,6 +374,7 @@ class _EditableTableState extends State<_EditableTable> {
                 : 54,
           );
           cellFormats = savedFormats;
+          _normalizeGridShape();
         });
         return;
       } catch (_) {}
@@ -355,6 +383,7 @@ class _EditableTableState extends State<_EditableTable> {
       columnWidths = List<double>.filled(columns.length, 180);
       rowHeights = List<double>.filled(rows.length, 54);
       cellFormats = <String, Map<String, Object?>>{};
+      _normalizeGridShape();
     });
   }
 
@@ -424,17 +453,7 @@ class _EditableTableState extends State<_EditableTable> {
                   child: const Chip(avatar: Icon(Icons.format_color_fill, size: 18), label: Text('Cell color')),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      columns.add('Column ${columns.length + 1}');
-                      columnWidths.add(180);
-                      for (final row in rows) {
-                        row.add('');
-                      }
-                    });
-                    _save(controller);
-                    _savePreferences();
-                  },
+                  onPressed: () => _addColumn(controller),
                   icon: const Icon(Icons.add),
                   label: const Text('Add column'),
                 ),
@@ -457,14 +476,7 @@ class _EditableTableState extends State<_EditableTable> {
                   label: const Text('Delete empty columns'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      rows.add(List.filled(columns.length, ''));
-                      rowHeights.add(54);
-                    });
-                    _save(controller);
-                    _savePreferences();
-                  },
+                  onPressed: () => _addRow(controller),
                   icon: const Icon(Icons.add),
                   label: const Text('Add row'),
                 ),
@@ -538,33 +550,47 @@ class _EditableTableState extends State<_EditableTable> {
         final viewportWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : totalWidth;
+        final viewportHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 600.0;
         final canvasWidth = totalWidth < viewportWidth
             ? viewportWidth
             : totalWidth;
-        final canvasHeight = constraints.maxHeight.isFinite
-            ? constraints.maxHeight
-            : 600.0;
-        return SingleChildScrollView(
+        if (viewportHeight <= 0) return const SizedBox.shrink();
+        return Scrollbar(
           controller: _horizontalController,
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: canvasWidth,
-            height: canvasHeight,
-            child: SingleChildScrollView(
-              controller: _verticalController,
-              scrollDirection: Axis.vertical,
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 28),
+          thumbVisibility: true,
+          scrollbarOrientation: ScrollbarOrientation.bottom,
+          child: SingleChildScrollView(
+            controller: _horizontalController,
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: canvasWidth,
+              height: viewportHeight,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildHeaderRow(controller),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildHeaderRow(controller),
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  for (
-                    var rowIndex = 0;
-                    rowIndex < rows.length;
-                    rowIndex++
-                  )
-                    _buildDataRow(controller, rowIndex),
+                  Expanded(
+                    child: Scrollbar(
+                      controller: _verticalController,
+                      thumbVisibility: true,
+                      child: ListView.builder(
+                        controller: _verticalController,
+                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 28),
+                        itemCount: rows.length,
+                        itemBuilder: (context, rowIndex) =>
+                            _buildDataRow(controller, rowIndex),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -611,10 +637,6 @@ class _EditableTableState extends State<_EditableTable> {
   }
 
   Widget _buildDataRow(AppController controller, int rowIndex) {
-    while (rows[rowIndex].length < columns.length) {
-      rows[rowIndex].add('');
-    }
-    while (rowHeights.length <= rowIndex) rowHeights.add(54);
     final rowHeight = rowHeights[rowIndex].clamp(38, 360).toDouble();
     return SizedBox(
       height: rowHeight,
@@ -625,34 +647,59 @@ class _EditableTableState extends State<_EditableTable> {
             _buildEditableCell(controller, rowIndex, columnIndex),
           SizedBox(
             width: 52,
-            child: Column(
+            child: Stack(
               children: [
-                Expanded(
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeRow,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: (details) => resizeRow(rowIndex, details.delta.dy),
-                      onVerticalDragEnd: (_) => _savePreferences(),
-                      child: const Tooltip(
-                        message: 'Drag to resize row',
-                        child: Icon(Icons.drag_handle),
+                Positioned(
+                  top: 3,
+                  right: 7,
+                  child: IconButton(
+                    tooltip: 'Delete row',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 30,
+                      height: 30,
+                    ),
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    onPressed: () {
+                      setState(() {
+                        rows.removeAt(rowIndex);
+                        if (rowIndex < rowHeights.length) {
+                          rowHeights.removeAt(rowIndex);
+                        }
+                        _removeRowFormats(rowIndex);
+                        _normalizeGridShape();
+                      });
+                      _save(controller);
+                      _savePreferences();
+                    },
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 10,
+                  child: Tooltip(
+                    message: 'Drag bottom edge to resize row',
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.resizeRow,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onVerticalDragUpdate: (details) =>
+                            resizeRow(rowIndex, details.delta.dy),
+                        onVerticalDragEnd: (_) => _savePreferences(),
+                        child: Container(
+                          alignment: Alignment.center,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: .12),
+                          child: const Icon(Icons.drag_handle, size: 12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Delete row',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () {
-                    setState(() {
-                      rows.removeAt(rowIndex);
-                      if (rowIndex < rowHeights.length) rowHeights.removeAt(rowIndex);
-                      _removeRowFormats(rowIndex);
-                    });
-                    _save(controller);
-                    _savePreferences();
-                  },
                 ),
               ],
             ),
@@ -687,9 +734,10 @@ class _EditableTableState extends State<_EditableTable> {
       child: TextFormField(
         key: ValueKey('${widget.table.id}-$rowIndex-$columnIndex'),
         initialValue: rows[rowIndex][columnIndex],
-        minLines: 1,
+        expands: wrapText,
+        minLines: wrapText ? null : 1,
         maxLines: wrapText ? null : 1,
-        expands: false,
+        textAlignVertical: TextAlignVertical.top,
         style: TextStyle(
           fontSize: fontSize,
           height: 1.25,
@@ -710,6 +758,32 @@ class _EditableTableState extends State<_EditableTable> {
         ),
       ),
     );
+  }
+
+  void _addColumn(AppController controller) {
+    setState(() {
+      columns.add('Column ${columns.length + 1}');
+      columnWidths.add(180);
+      for (final row in rows) {
+        row.add('');
+      }
+      _normalizeGridShape();
+      _selectedColumnIndex = columns.length - 1;
+    });
+    _save(controller);
+    _savePreferences();
+  }
+
+  void _addRow(AppController controller) {
+    setState(() {
+      rows.add(List<String>.filled(columns.length, ''));
+      rowHeights.add(54);
+      _normalizeGridShape();
+      _selectedRowIndex = rows.length - 1;
+      _selectedCellColumnIndex = columns.isEmpty ? null : 0;
+    });
+    _save(controller);
+    _savePreferences();
   }
 
   void resizeRow(int rowIndex, double delta) {
@@ -764,6 +838,12 @@ class _EditableTableState extends State<_EditableTable> {
 
   void _deleteColumn(AppController controller, int columnIndex) {
     if (columnIndex < 0 || columnIndex >= columns.length) return;
+    if (columns.length == 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A table needs at least one column.')),
+      );
+      return;
+    }
     setState(() {
       columns.removeAt(columnIndex);
       if (columnIndex < columnWidths.length) {
@@ -775,6 +855,7 @@ class _EditableTableState extends State<_EditableTable> {
       cellFormats.clear();
       _selectedRowIndex = null;
       _selectedCellColumnIndex = null;
+      _normalizeGridShape();
       if (columns.isEmpty) {
         _selectedColumnIndex = null;
       } else if (_selectedColumnIndex != null) {
@@ -858,6 +939,7 @@ class _EditableTableState extends State<_EditableTable> {
         }
       }
       _selectedColumnIndex = null;
+      _normalizeGridShape();
     });
     _save(controller);
     _savePreferences();
@@ -981,7 +1063,7 @@ class _ResizableHeaderCell extends StatelessWidget {
               child: TextFormField(
                 initialValue: value,
                 minLines: 1,
-                maxLines: null,
+                maxLines: 1,
                 style: TextStyle(
                   fontSize: fontSize,
                   fontWeight: FontWeight.w800,

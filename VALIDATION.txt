@@ -1,29 +1,27 @@
-SlamDone V7.14.3 Table + Journal Corrective Hotfix — validation targets
+SlamDone V7.14.4 Stable Tables + GTD Drag Corrective Hotfix — validation targets
 
-New V7.14.3 regression contracts
-- Tables editor delegates its body to a bounded table canvas.
-- The table canvas uses explicit finite width/height guards and two axis-specific
-  SingleChildScrollView widgets, with a content-sized Column rather than a nested ListView.
-- New tables are named "New table" by default and still start with Topic / Status plus one
-  editable blank row.
-- Add row and Add column remain explicit controls.
-- Every Journal card has a direct Delete button plus the existing menu Delete action.
-- Both Journal delete paths share the same confirmation helper.
-- Journal deletion remains controller/repository soft-delete and refreshes the journal view.
+New V7.14.4 regression contracts
+- Tables canvas uses one horizontal viewport containing a bounded Column and vertical ListView.builder.
+- Repeated Add column / Add row actions route through dedicated helpers and normalize grid shape.
+- Column widths, row heights, and row cell counts remain aligned with the current grid dimensions.
+- Column resize remains a right-edge drag interaction.
+- Row resize uses a compact bottom-edge drag target that fits the minimum row height.
+- Wrapped text editors expand inside the resized row and reflow when column width changes.
+- GTD drops route through AppController.moveWorkItemToGtdStatus.
+- Active GTD destinations cancel pending auto-archive and reduce a fully-complete checklist below the repository completion threshold, preventing snap-back to Completed.
+- Completed and Archive destinations continue to map to the corresponding WorkStatus.
 
-Cumulative V7.14.2 contracts retained
-- Journal editor rebuilds after async loading.
-- Habit checklist hit targets remain clickable with the top day scrollbar reserved above rows.
-- Focus/manual action and archive/complete notices close after five seconds.
-- Focus To Win -> Focus and Study Tables -> Tables legacy-default migration remains present.
+Cumulative V7.14.2/V7.14.3 contracts retained
+- Journal editor async loading repair and direct Journal delete remain present.
+- Habit checklist hit targets remain clickable.
+- Five-second action notices remain bounded.
+- Focus / Tables naming migration remains present.
 - GitHub Pages base-href and Firebase/local-data schemas remain unchanged.
 
 Local verification
-- Python repository contract suite is rerun immediately before packaging.
-- The cumulative root overlay is extracted onto a pristine V7.14.1 source copy and the full
-  contract suite is rerun there.
-- ZIP structure is checked to ensure repository-root paths (no wrapper folder).
-- Flutter/Dart SDK is not installed in this artifact environment; the actual Flutter web compile
-  remains the preserved GitHub Actions workflow's job after upload.
+- Python repository contract suite: 164 tests passed, 0 failures (15 intentionally skipped retired native-companion contracts).
+- The cumulative root overlay is applied to a pristine V7.14.1 source copy and the full contract suite is rerun there.
+- ZIP structure is checked to ensure repository-root paths with no wrapper folder.
+- Flutter/Dart SDK is not installed in this artifact environment; the actual Flutter web compile remains the preserved GitHub Actions workflow after upload.
 
-Version: 7.14.3+243
+Version: 7.14.4+244

@@ -102,15 +102,8 @@ class _GtdBoard extends StatelessWidget {
               .toList(),
           onDrop: (id) async {
             final item = controller.itemById(id);
-            if (item == null) return;
-            final statusValue = status == GtdStatus.completed
-                ? WorkStatus.completed
-                : status == GtdStatus.archived
-                    ? WorkStatus.archived
-                    : WorkStatus.active;
-            await controller.updateWorkItem(
-              item.copyWith(gtdStatus: status, status: statusValue),
-            );
+            if (item == null || item.gtdStatus == status) return;
+            await controller.moveWorkItemToGtdStatus(item, status);
           },
         );
       }).toList(),

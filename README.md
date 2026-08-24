@@ -111,6 +111,10 @@ V7.13 restores the stable V7.11 floating-timer implementation: Chrome/Edge Docum
 V7.13.1 does not require or connect to the retired V7.12 Windows timer companion. Desktop Pin uses the browser Picture-in-Picture timer again. This intentionally restores the V7.11 behavior: browser Picture-in-Picture keeps its browser-owned title bar, and its opacity control is only a visual fade rather than true Windows see-through transparency. No native background process is required. If V7.12's companion was previously installed, run `Remove-Old-SlamDone-Timer-Companion.cmd` once to remove its Windows startup entry and local files. Old companion source files left behind in a GitHub repository by an upload-only update are inert and do not affect SlamDone.
 
 
+## V7.14.4 Tables + GTD drag corrective fix
+
+V7.14.4 is cumulative over V7.14.3. Tables now use a bounded spreadsheet-style viewport designed for repeated row/column growth, with drag-resizable columns and rows and cell text that reflows inside the resized cell. GTD workflow cards can now be dragged in either direction across Inbox, To Be Done, In Progress, Completed, and Archive; completed checklist state is reconciled with the destination so a restored item does not snap back to Completed. No Firebase or local-database schema changes are introduced.
+
 ## V7.14.3 table + journal corrective fix
 
 V7.14.3 is cumulative over V7.14.2. It replaces the Tables editor's fragile nested viewport body with an explicitly bounded two-axis editing canvas so a newly created table can render immediately, then add/edit/delete rows and columns normally. Journal cards now show a direct trash button in addition to the three-dot Delete entry; both use the existing confirmation and synced soft-delete flow. No Firebase or local-database schema changes are introduced.

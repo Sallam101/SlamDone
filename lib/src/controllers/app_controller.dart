@@ -696,6 +696,38 @@ class AppController extends ChangeNotifier {
     _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
   }
 
+  Future<void> moveWorkItemToGtdStatus(
+    WorkItem item,
+    GtdStatus target,
+  ) async {
+    final targetWorkStatus = target == GtdStatus.completed
+        ? WorkStatus.completed
+        : target == GtdStatus.archived
+            ? WorkStatus.archived
+            : WorkStatus.active;
+    var targetChecklistDone = item.checklistDone;
+    if (target == GtdStatus.completed && item.checklistTotal > 0) {
+      targetChecklistDone = item.checklistTotal;
+    } else if (target != GtdStatus.archived &&
+        target != GtdStatus.completed &&
+        item.checklistTotal > 0 &&
+        targetChecklistDone >= item.checklistTotal) {
+      targetChecklistDone = (item.checklistTotal - 1).clamp(0, item.checklistTotal).toInt();
+    }
+    if (targetWorkStatus == WorkStatus.active) {
+      _cancelPendingAutoArchive(item.id);
+    }
+    await repository.updateWorkItem(
+      item.copyWith(
+        gtdStatus: target,
+        status: targetWorkStatus,
+        checklistDone: targetChecklistDone,
+      ),
+    );
+    await refreshWorkItemsAndLayouts();
+    _scheduleCloudPush();
+  }
+
   Future<void> setWorkItemCompleted(WorkItem item, bool value) async {
     final before = itemById(item.id) ?? item;
     if (!value) {

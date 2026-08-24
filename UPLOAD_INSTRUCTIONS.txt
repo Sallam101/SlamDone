@@ -1,21 +1,13 @@
-SlamDone V7.14.3 — Cumulative GitHub root overlay
+SlamDone V7.14.4 — Cumulative GitHub root overlay
 
-PRIMARY USE: apply this overlay to the existing SlamDone repository that already has the
-V7.14.1 Combined Build + 5-Second Hotfix. It also contains the V7.14.2 corrective changes.
+1. Extract `SlamDone_V7_14_4_CUMULATIVE_ROOT_OVERLAY.zip`.
+2. Open the extracted folder. You should immediately see `lib`, `tool_tests`, `pubspec.yaml`, and documentation files. There is no wrapper folder.
+3. Upload those contents into the ROOT of your existing SlamDone GitHub repository.
+4. Replace matching files when GitHub asks.
+5. Commit the upload and let the existing GitHub Pages workflow run.
 
-IMPORTANT: THIS ZIP HAS NO EXTRA WRAPPER FOLDER.
+The overlay is cumulative over the prior V7.14.x corrective builds. It includes the earlier Journal/Habits/5-second-message/name fixes plus the V7.14.3 Journal delete repair and this V7.14.4 Tables/GTD repair.
 
-1. Extract the ZIP.
-2. Inside the extracted location you will immediately see lib/, tool_tests/, pubspec.yaml, etc.
-3. Drag/upload those items into the ROOT of the existing SlamDone GitHub repository.
-4. Keep the folder paths and replace the matching files.
-5. Commit once and let the existing GitHub Pages workflow run.
+No database, Firebase schema, migration payload, or personal progress file is included.
 
-DATA SAFETY
-- No Firebase schema change.
-- No local SQLite/database schema change.
-- No migration-format change.
-- No deletion of existing user progress.
-- Journal Delete uses the existing soft-delete/tombstone pattern so Firebase sync propagates it.
-
-Version: 7.14.3+243
+Version: 7.14.4+244

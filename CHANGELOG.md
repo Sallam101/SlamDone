@@ -1,3 +1,12 @@
+# V7.14.4 - Stable Tables grid + bidirectional GTD drag
+
+- Replaced the fragile Tables two-axis body with a bounded spreadsheet viewport: one horizontal canvas containing a fixed header and a bounded vertical `ListView`, eliminating the layout-recovery path triggered while growing tables.
+- Added explicit repeatable **Add column** and **Add row** helpers with grid-shape normalization, so every row, width, and height remains aligned after repeated structural edits.
+- Kept column right-edge drag resizing and changed row resizing to a compact bottom-edge drag handle that still fits short rows. Wrapped cell editors now fill the resized row height so text reflows with column width and row height.
+- Added bidirectional GTD status movement. Dropping a Completed/Archived item back into Inbox, To Be Done, or In Progress now clears the completed state enough to prevent repository normalization from immediately forcing it back to Completed.
+- Moving an item back to an active GTD status also cancels any pending five-second auto-archive timer.
+- No Firebase schema, SQLite schema, migration wire-format, timer, Journal, Habits, Big Picture, Mind Map, Rewards, NorthStar, or unrelated feature changes.
+
 # V7.14.3 - Table first-render repair + visible Journal delete
 
 - Rebuilt the Tables editing canvas around explicit finite viewport constraints and two simple axis-specific scroll views. This removes the nested Scrollbar/ListView first-render path that could send a newly created table directly to SlamDone's recovery screen.
