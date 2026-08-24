@@ -287,7 +287,7 @@ class _LiveTimerCard extends StatelessWidget {
   }
 }
 
-const _focusUndoLifetime = Duration(minutes: 5);
+const _focusUndoLifetime = Duration(seconds: 5);
 
 void _showFocusUndoSnackBar(
   BuildContext context, {

@@ -184,37 +184,42 @@ class _HabitsScreenState extends State<HabitsScreen> {
                           ),
                         ),
                         Expanded(
-                          child: Scrollbar(
-                            controller: _horizontal,
-                            thumbVisibility: true,
-                            scrollbarOrientation: ScrollbarOrientation.top,
-                            crossAxisMargin: _dayHeaderHeight,
-                            child: SingleChildScrollView(
+                          child: ScrollbarTheme(
+                            data: ScrollbarTheme.of(context).copyWith(
+                              crossAxisMargin: _dayHeaderHeight,
+                            ),
+                            child: Scrollbar(
                               controller: _horizontal,
-                              scrollDirection: Axis.horizontal,
-                              child: SizedBox(
-                                width: days * 58.0,
-                                height: contentHeight,
-                                child: Column(
-                                  children: [
-                                    _DayHeader(month: _month, days: days),
-                                    for (final habit in habits)
-                                      _HabitDayRow(
-                                        height: rowHeights[habit.id] ?? 74,
-                                        habit: habit,
-                                        month: _month,
-                                        days: days,
-                                        values: entries,
-                                        onSet: controller.setHabitValue,
-                                        onNumberInput: (key, value) =>
-                                            _numberInput(
-                                              context,
-                                              habit,
-                                              key,
-                                              value,
-                                            ),
-                                      ),
-                                  ],
+                              thumbVisibility: true,
+                              scrollbarOrientation:
+                                  ScrollbarOrientation.top,
+                              child: SingleChildScrollView(
+                                controller: _horizontal,
+                                scrollDirection: Axis.horizontal,
+                                child: SizedBox(
+                                  width: days * 58.0,
+                                  height: contentHeight,
+                                  child: Column(
+                                    children: [
+                                      _DayHeader(month: _month, days: days),
+                                      for (final habit in habits)
+                                        _HabitDayRow(
+                                          height: rowHeights[habit.id] ?? 74,
+                                          habit: habit,
+                                          month: _month,
+                                          days: days,
+                                          values: entries,
+                                          onSet: controller.setHabitValue,
+                                          onNumberInput: (key, value) =>
+                                              _numberInput(
+                                                context,
+                                                habit,
+                                                key,
+                                                value,
+                                              ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

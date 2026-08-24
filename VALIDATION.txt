@@ -1,16 +1,16 @@
-SlamDone V7.14.1 GitHub Build Base-Href Hotfix — Validation
+SlamDone V7.14.1 Combined Build + 5-Second Undo Hotfix — validation targets
 
-Root cause confirmed from the failed GitHub Actions log:
-Flutter web build requires the exact placeholder:
-  <base href="$FLUTTER_BASE_HREF">
-The V7.14.1 web/index.html did not contain it.
+Required source contracts:
+- Habit horizontal Material Scrollbar does NOT receive crossAxisMargin directly.
+- Habit horizontal scrollbar is wrapped in a local ScrollbarTheme whose data uses:
+    ScrollbarTheme.of(context).copyWith(crossAxisMargin: _dayHeaderHeight)
+- Horizontal scrollbar remains ScrollbarOrientation.top.
+- Current-day auto-positioning remains enabled.
+- Focus Undo lifetime is exactly Duration(seconds: 5).
+- Duration(minutes: 5) is absent from focus_screen.dart.
+- web/index.html contains <base href="$FLUTTER_BASE_HREF">.
+- Existing light floating timer theme bridge remains present in web/index.html.
 
-TDD verification:
-- Regression test was first run against the broken index and failed as expected.
-- Added exactly one Flutter base-href placeholder.
-- Regression test then passed.
-
-Compatibility:
-- Keeps the V7.14.1 light floating-timer themes.
-- Keeps flutter_bootstrap.js.
-- Does not touch the Focus Undo timeout, so it can be applied before or after the 5-second Undo hotfix.
+Repository contract suite is run against a full V7.14.1 source overlay before packaging.
+Flutter itself is not installed in the artifact environment, so the actual `flutter build web`
+compile is performed by the repository's GitHub Actions runner after upload.

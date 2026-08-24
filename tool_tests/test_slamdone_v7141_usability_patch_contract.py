@@ -21,16 +21,25 @@ class SlamDoneV7141UsabilityPatchContractTest(unittest.TestCase):
     def test_habit_horizontal_scrollbar_is_under_day_header_and_today_is_auto_positioned(self):
         habits = self.read('lib/src/screens/habits_screen.dart')
         self.assertIn('static const double _dayHeaderHeight = 60.0;', habits)
-        self.assertIn('scrollbarOrientation: ScrollbarOrientation.top,', habits)
+        self.assertRegex(
+            habits,
+            r'scrollbarOrientation:\s*ScrollbarOrientation\.top,',
+        )
+        self.assertIn('ScrollbarTheme.of(context).copyWith(', habits)
         self.assertIn('crossAxisMargin: _dayHeaderHeight,', habits)
+        self.assertNotRegex(
+            habits,
+            r'Scrollbar\(\s*controller: _horizontal,[\s\S]{0,240}?crossAxisMargin:',
+        )
         self.assertIn('void _queueScrollToToday()', habits)
         self.assertIn('final viewport = _horizontal.position.viewportDimension;', habits)
         self.assertIn('final todayCenter = (now.day - .5) * 58.0;', habits)
         self.assertIn('_queueScrollToToday();', habits)
 
-    def test_focus_undo_snackbars_have_a_hard_five_minute_lifetime(self):
+    def test_focus_undo_snackbars_have_a_hard_five_second_lifetime(self):
         focus = self.read('lib/src/screens/focus_screen.dart')
-        self.assertIn('const _focusUndoLifetime = Duration(minutes: 5);', focus)
+        self.assertIn('const _focusUndoLifetime = Duration(seconds: 5);', focus)
+        self.assertNotIn('Duration(minutes: 5)', focus)
         self.assertIn('void _showFocusUndoSnackBar(', focus)
         self.assertIn('duration: _focusUndoLifetime,', focus)
         self.assertIn('Timer(_focusUndoLifetime, snackController.close);', focus)
@@ -56,6 +65,10 @@ class SlamDoneV7141UsabilityPatchContractTest(unittest.TestCase):
         self.assertIn("name: 'Pale yellow'", brand_web)
         self.assertIn("root.style.setProperty('--timer-bg'", brand_web)
         self.assertIn('themes.forEach((theme, index) => {', brand_web)
+
+    def test_web_index_keeps_flutter_base_href_placeholder_for_github_pages_build(self):
+        web = self.read('web/index.html')
+        self.assertIn('<base href="$FLUTTER_BASE_HREF">', web)
 
     def test_release_version_is_7141(self):
         pubspec = self.read('pubspec.yaml')
