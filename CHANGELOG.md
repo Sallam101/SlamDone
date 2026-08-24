@@ -1,10 +1,18 @@
-# SlamDone V7.13.0 — Browser-only timer rollback
+# V7.13.1 - Upload-safe browser timer rollback
 
-- Removed the Windows Timer Companion, installer, loopback bridge, background polling, Windows build job, and companion download artifact.
-- Restored the known-good V7.11 browser-only Desktop Pin implementation using Chromium Document Picture-in-Picture.
-- Restored the previous timer appearance/controls, eight accent choices, and optional 25–100% browser fade control.
-- Kept the bundled `soft_chime.wav` completion sound and the existing single TimerEngine state.
-- Restored the normal two-job GitHub Pages workflow (`build` → `deploy`) while retaining `rm -f test/widget_test.dart`.
+- Keeps the V7.13 browser-only Picture-in-Picture timer rollback.
+- Makes the rollback safe when GitHub web uploads leave the old V7.12 `windows_timer_companion/` folder behind. Those stale files are inert and are not called by SlamDone.
+- Adds `Remove-Old-SlamDone-Timer-Companion.cmd` to stop and remove any V7.12 companion previously installed in Windows startup.
+- CI tests now verify runtime isolation from the native companion instead of requiring GitHub to physically delete an old folder during an upload-only patch.
+
+# V7.13.0 — Stable browser-only timer rollback
+
+- Fully removed the V7.12 Windows timer companion, loopback bridge, installer, background startup entry, and Windows CI build.
+- Restored the V7.11 browser/PWA floating timer runtime exactly for stability.
+- Desktop Pin again uses Chromium Document Picture-in-Picture only.
+- Restored the original timer color palette and original optional opacity/fade control.
+- Kept the V7.11 bundled soft completion chime.
+- No planner, sync, Tasks, Overview, Big Picture, hierarchy, or Firebase data model changes.
 
 # SlamDone V7.12.0
 

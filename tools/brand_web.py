@@ -236,9 +236,10 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
     doc.body.innerHTML = `<main id="sd-timer-root">
       <div class="header">
         <div id="sd-title">General focus</div>
-        <button class="icon" id="sd-opacity" title="Fade timer">◐</button>
+        <button class="icon" id="sd-opacity" title="Transparency">◐</button>
         <button class="icon" id="sd-color" title="Timer color">●</button>
         <button class="icon" id="sd-unpin" title="Return timer to SlamDone">📌</button>
+        <button class="icon" id="sd-close" title="Close timer">×</button>
       </div>
       <section class="body">
         <div id="sd-opacity-pop" class="popover"><span>◐</span><input id="sd-opacity-range" type="range" min="0.25" max="1" step="0.05" value="1"></div>
@@ -259,6 +260,7 @@ desktop_timer_bridge = r'''<script id="slamdone-desktop-timer-bridge">
     byId('sd-stop').addEventListener('click', () => action('stop'));
     byId('sd-stopwatch').addEventListener('click', () => { primeChime(); action('stopwatch'); });
     byId('sd-unpin').addEventListener('click', () => action('unpin'));
+    byId('sd-close').addEventListener('click', () => action('close'));
 
     const opacityPop = byId('sd-opacity-pop');
     const palettePop = byId('sd-palette');
