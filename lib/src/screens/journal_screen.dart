@@ -356,6 +356,16 @@ class _JournalScreenState extends State<JournalScreen> {
                             ),
                           ),
                         ),
+                        IconButton(
+                          tooltip: 'Delete journal page',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _confirmDeleteJournal(entry),
+                          icon: Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
                         _entryMenu(entry),
                       ],
                     ),
@@ -406,6 +416,8 @@ class _JournalScreenState extends State<JournalScreen> {
             await AppScope.read(context).saveJournal(
               entry.copyWith(archived: !entry.archived),
             );
+          } else if (value == 'delete') {
+            await _confirmDeleteJournal(entry);
           } else if (value == 'open') {
             await _openEntry(entry);
           }
@@ -416,8 +428,37 @@ class _JournalScreenState extends State<JournalScreen> {
             value: 'archive',
             child: Text(entry.archived ? 'Restore' : 'Archive'),
           ),
+          const PopupMenuDivider(),
+          const PopupMenuItem(value: 'delete', child: Text('Delete')),
         ],
       );
+
+
+  Future<void> _confirmDeleteJournal(JournalEntry entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete journal page?'),
+        content: Text(
+          'Delete the journal page for ${entry.entryDate}? This removes it from your journal views.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await AppScope.read(context).deleteJournal(entry);
+    }
+  }
 
   bool _matchesPeriod(DateTime date) {
     final anchor = DateTime(_anchorDate.year, _anchorDate.month, _anchorDate.day);

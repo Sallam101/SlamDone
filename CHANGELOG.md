@@ -1,8 +1,27 @@
+# V7.14.3 - Table first-render repair + visible Journal delete
+
+- Rebuilt the Tables editing canvas around explicit finite viewport constraints and two simple axis-specific scroll views. This removes the nested Scrollbar/ListView first-render path that could send a newly created table directly to SlamDone's recovery screen.
+- New tables still start with `Topic` / `Status` plus one editable blank row, and keep Add row, Add column, column deletion/resizing, row deletion/resizing, formatting, CSV/Excel export, archive, and table delete controls.
+- Renamed the default new-table name from **New study table** to **New table** to match the Tables section name.
+- Added a directly visible red trash button on every Journal card. The three-dot menu also retains Delete. Both paths use the same confirmation dialog and existing synced soft-delete/tombstone flow.
+- This release is cumulative over V7.14.2 and preserves its Journal-load, Habits, five-second action-message, Focus/Tables naming, and data-safety fixes.
+- No Firebase schema, local database schema, migration format, planner hierarchy, or stored-progress format changes.
+
+# V7.14.2 - Corrective Journal, Habits, Tables + 5-second action messages
+
+- Fixed Journal editor pages staying on the loading spinner by rebuilding the editor after the asynchronous entry load finishes.
+- Added a confirmed Delete action for journal pages using the existing soft-delete/sync model; Archive/Restore remains unchanged.
+- Fixed Habit Month checkbox interaction by reserving a dedicated strip for the top horizontal scrollbar instead of allowing it to overlap the first habit row.
+- Stabilized the Tables editor header layout, starts new tables with an editable blank row, and keeps explicit Add row / Add column controls visible.
+- Standardized transient action/Undo messaging to a hard five-second lifetime, including child-task completion/archive Undo and the desktop app-bar status message.
+- Renamed the Focus tab/screen from **Focus To Win** to **Focus** and the Study Tables tab/screen to **Tables**, including migration of those exact legacy default tab labels for existing users.
+- No Firebase schema, local database schema, migration format, planner hierarchy, focus ledger, or stored progress format changes.
+
 # V7.14.1 - Current-week, habit navigation, Undo timeout + light timer themes
 
 - 52 Weeks now opens on the current week row for the current ISO year instead of starting at Week 1.
 - Habit Month moves the horizontal day scrollbar directly below the day header and automatically positions the current month around today's column on first view/month return.
-- Manual focus log/remove Undo snackbars now have a hard five-minute lifetime, including an explicit close timer so they cannot remain indefinitely.
+- Manual focus log/remove Undo snackbars now have a hard five-second lifetime, including an explicit close timer so they cannot remain indefinitely.
 - Floating timer keeps the original eight accent choices and adds eight light full-background choices: White, Soft gray, Cream, Mint, Ice blue, Lavender, Blush, and Pale yellow. The browser Picture-in-Picture timer uses the same 16-choice palette.
 - Preserved the V7.14 focus ledger, Firebase schema, Autivra migration format, planner hierarchy, browser-only GitHub Pages deployment, NorthStar, and Rewards data.
 

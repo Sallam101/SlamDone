@@ -75,7 +75,7 @@ class _FocusScreenState extends State<FocusScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Focus To Win',
+                        'Focus',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const Text(

@@ -32,6 +32,8 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
+const _actionMessageLifetime = Duration(seconds: 5);
+
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   AppController? _lifecycleController;
@@ -645,11 +647,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
+      final snackController = messenger.showSnackBar(
         SnackBar(
-          duration: const Duration(seconds: 4),
+          duration: _actionMessageLifetime,
           content: Text(
-            'Completed & archived: ${notice.title}. It will disappear in 4 seconds.',
+            'Completed & archived: ${notice.title}. It will disappear in 5 seconds.',
           ),
           action: SnackBarAction(
             label: 'UNDO',
@@ -657,6 +659,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           ),
         ),
       );
+      final expiryTimer = Timer(_actionMessageLifetime, snackController.close);
+      snackController.closed.whenComplete(expiryTimer.cancel);
     });
   }
 

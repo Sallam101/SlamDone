@@ -62,6 +62,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     _body.addListener(_queueSave);
     _folder.addListener(_queueSave);
     _status.value = 'Saved locally';
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   String _valueFor(JournalEntry entry, String id, Map<String, String> custom) =>

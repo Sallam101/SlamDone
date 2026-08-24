@@ -111,11 +111,19 @@ V7.13 restores the stable V7.11 floating-timer implementation: Chrome/Edge Docum
 V7.13.1 does not require or connect to the retired V7.12 Windows timer companion. Desktop Pin uses the browser Picture-in-Picture timer again. This intentionally restores the V7.11 behavior: browser Picture-in-Picture keeps its browser-owned title bar, and its opacity control is only a visual fade rather than true Windows see-through transparency. No native background process is required. If V7.12's companion was previously installed, run `Remove-Old-SlamDone-Timer-Companion.cmd` once to remove its Windows startup entry and local files. Old companion source files left behind in a GitHub repository by an upload-only update are inert and do not affect SlamDone.
 
 
+## V7.14.3 table + journal corrective fix
+
+V7.14.3 is cumulative over V7.14.2. It replaces the Tables editor's fragile nested viewport body with an explicitly bounded two-axis editing canvas so a newly created table can render immediately, then add/edit/delete rows and columns normally. Journal cards now show a direct trash button in addition to the three-dot Delete entry; both use the existing confirmation and synced soft-delete flow. No Firebase or local-database schema changes are introduced.
+
+## V7.14.2 corrective hotfix
+
+V7.14.2 repairs the Journal loading regression, restores clickable checklist habits, stabilizes the Tables editor so new tables can immediately add/edit rows and columns, and gives journal pages a confirmed Delete action in addition to Archive/Restore. Transient action and Undo messages are hard-limited to five seconds. The visible labels are now **Focus** and **Tables** while exact legacy default labels are migrated automatically for existing users. No Firebase or local-database schema changes are introduced.
+
 ## V7.14.1 usability patch
 
 - 52 Weeks opens around the current week.
 - Habit Month day scrolling is available directly under the day headers and recenters on today when the current month is opened.
-- Focus add/remove Undo stays available for up to five minutes, then closes automatically.
+- Focus add/remove Undo stays available for five seconds, then closes automatically.
 - Floating timer adds eight light background themes while keeping all original color choices and browser Picture-in-Picture behavior.
 
 ## V7.14.0 focus accuracy and reversible daily sessions

@@ -58,7 +58,7 @@ class _StudyTablesScreenState extends State<StudyTablesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Study Tables',
+                          'Tables',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const Text(
@@ -120,7 +120,7 @@ class _StudyTablesScreenState extends State<StudyTablesScreen> {
   }
 
   Future<void> _newTable(BuildContext context) async {
-    final title = TextEditingController(text: 'New study table');
+    final title = TextEditingController(text: 'New table');
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -233,6 +233,8 @@ class _EditableTable extends StatefulWidget {
 }
 
 class _EditableTableState extends State<_EditableTable> {
+  static const double _tableHeaderHeight = 58.0;
+
   late List<String> columns;
   late List<List<String>> rows;
   List<double> columnWidths = <double>[];
@@ -464,7 +466,7 @@ class _EditableTableState extends State<_EditableTable> {
                     _savePreferences();
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Row'),
+                  label: const Text('Add row'),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _exportCsv(context),
@@ -523,45 +525,58 @@ class _EditableTableState extends State<_EditableTable> {
             ),
           ),
           const Divider(height: 1),
-          Expanded(
-            child: Scrollbar(
-              controller: _horizontalController,
-              thumbVisibility: true,
-              scrollbarOrientation: ScrollbarOrientation.bottom,
-              child: SingleChildScrollView(
-                controller: _horizontalController,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: totalWidth,
-                  child: Scrollbar(
-                    controller: _verticalController,
-                    thumbVisibility: true,
-                    child: ListView(
-                      controller: _verticalController,
-                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 28),
-                      children: [
-                        _buildHeaderRow(controller),
-                        const SizedBox(height: 4),
-                        for (
-                          var rowIndex = 0;
-                          rowIndex < rows.length;
-                          rowIndex++
-                        )
-                          _buildDataRow(controller, rowIndex),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          Expanded(child: _buildTableCanvas(controller, totalWidth)),
         ],
       ),
     );
   }
 
+
+  Widget _buildTableCanvas(AppController controller, double totalWidth) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : totalWidth;
+        final canvasWidth = totalWidth < viewportWidth
+            ? viewportWidth
+            : totalWidth;
+        final canvasHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 600.0;
+        return SingleChildScrollView(
+          controller: _horizontalController,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: canvasWidth,
+            height: canvasHeight,
+            child: SingleChildScrollView(
+              controller: _verticalController,
+              scrollDirection: Axis.vertical,
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderRow(controller),
+                  const SizedBox(height: 4),
+                  for (
+                    var rowIndex = 0;
+                    rowIndex < rows.length;
+                    rowIndex++
+                  )
+                    _buildDataRow(controller, rowIndex),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildHeaderRow(AppController controller) {
-    return IntrinsicHeight(
+    return SizedBox(
+      height: _tableHeaderHeight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -946,6 +961,7 @@ class _ResizableHeaderCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
+      height: _EditableTableState._tableHeaderHeight,
       child: Stack(
         children: [
           Positioned.fill(

@@ -29,7 +29,7 @@ class SlamDoneSprint1ContractTest(unittest.TestCase):
 
     def test_child_task_delayed_archive_and_undo_exist(self):
         controller = self.read('lib/src/controllers/app_controller.dart')
-        self.assertIn('Duration(seconds: 4)', controller)
+        self.assertIn('Duration(seconds: 5)', controller)
         self.assertIn('item.type == WorkItemType.task', controller)
         self.assertIn('item.parentId != null', controller)
         self.assertIn('WorkStatus.archived', controller)

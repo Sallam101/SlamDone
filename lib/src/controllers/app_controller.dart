@@ -84,6 +84,7 @@ class AppController extends ChangeNotifier {
   List<TabPreference> tabPreferences = const [];
   List<Map<String, dynamic>> journalPrompts = const [];
   String? message;
+  Timer? _messageClearTimer;
   bool floatingTimerVisible = false;
   AutoArchiveNotice? autoArchiveNotice;
   int _autoArchiveNoticeSequence = 0;
@@ -127,7 +128,7 @@ class AppController extends ChangeNotifier {
     ),
     const TabPreference(
       section: AppSection.focus,
-      label: 'Focus To Win',
+      label: 'Focus',
       colorValue: 0xFFEF5350,
       iconKey: 'timer',
     ),
@@ -175,7 +176,7 @@ class AppController extends ChangeNotifier {
     ),
     const TabPreference(
       section: AppSection.studyTables,
-      label: 'Study Tables',
+      label: 'Tables',
       colorValue: 0xFF7E57C2,
       iconKey: 'table',
     ),
@@ -384,6 +385,17 @@ class AppController extends ChangeNotifier {
               .map(
                 (item) => TabPreference.fromMap(item.cast<String, dynamic>()),
               )
+              .map((item) {
+                final label = item.label == 'Focus To Win' ? 'Focus'
+                    : item.label == 'Study Tables' ? 'Tables'
+                    : item.label;
+                return TabPreference(
+                  section: item.section,
+                  label: label,
+                  colorValue: item.colorValue,
+                  iconKey: item.iconKey,
+                );
+              })
               .toList();
           final seen = values.map((item) => item.section).toSet();
           for (final fallback in defaultTabPreferences()) {
@@ -739,7 +751,7 @@ class AppController extends ChangeNotifier {
       sequence: ++_autoArchiveNoticeSequence,
     );
     notifyListeners();
-    _autoArchiveTimers[current.id] = Timer(const Duration(seconds: 4), () {
+    _autoArchiveTimers[current.id] = Timer(const Duration(seconds: 5), () {
       unawaited(_commitPendingAutoArchive(current.id));
     });
   }
@@ -749,6 +761,9 @@ class AppController extends ChangeNotifier {
     final current = itemById(itemId);
     if (current == null || current.status != WorkStatus.completed) {
       _autoArchiveSnapshots.remove(itemId);
+      if (autoArchiveNotice?.itemId == itemId) {
+        autoArchiveNotice = null;
+      }
       return;
     }
     await repository.updateWorkItem(
@@ -758,6 +773,9 @@ class AppController extends ChangeNotifier {
       ),
     );
     _autoArchiveSnapshots.remove(itemId);
+    if (autoArchiveNotice?.itemId == itemId) {
+      autoArchiveNotice = null;
+    }
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
   }
@@ -777,7 +795,7 @@ class AppController extends ChangeNotifier {
     if (autoArchiveNotice?.itemId == itemId) {
       autoArchiveNotice = null;
     }
-    message = 'Completion undone: ${current.title}';
+    _setMessage('Completion undone: ${current.title}');
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
   }
@@ -798,7 +816,7 @@ class AppController extends ChangeNotifier {
         gtdStatus: GtdStatus.completed,
       ),
     );
-    message = 'Unarchived: ${item.title}';
+    _setMessage('Unarchived: ${item.title}');
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
   }
@@ -870,6 +888,12 @@ class AppController extends ChangeNotifier {
     if (notifyGlobal) notifyListeners();
     _scheduleCloudPush();
     return saved;
+  }
+
+  Future<void> deleteJournal(JournalEntry entry) async {
+    await repository.deleteJournal(entry);
+    await refreshJournals();
+    _scheduleCloudPush();
   }
 
   Future<void> snapshotJournal(JournalEntry entry) =>
@@ -1307,30 +1331,41 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _setMessage(String value) {
+    message = value;
+    _messageClearTimer?.cancel();
+    notifyListeners();
+    _messageClearTimer = Timer(const Duration(seconds: 5), () {
+      if (message != value) return;
+      message = null;
+      notifyListeners();
+    });
+  }
+
   Future<MigrationImportResult> importMigration() async {
     final result = await repository.importMigrationJsonFile();
     await _loadSettings();
     await refreshAll();
     await timerEngine.reloadFromDatabase();
     await syncService.syncNow();
-    message =
-        'Autivra migration applied: ${result.totalChanged} local records changed.';
-    notifyListeners();
+    _setMessage(
+      'Autivra migration applied: ${result.totalChanged} local records changed.',
+    );
     return result;
   }
 
   Future<int> importV4() async {
     final count = await repository.importV4JsonFile();
     await refreshAll();
-    message = 'Imported $count records without duplicating existing IDs.';
-    notifyListeners();
+    _setMessage('Imported $count records without duplicating existing IDs.');
     return count;
   }
 
   Future<void> exportBackup() async {
     final file = await repository.exportBackup();
-    message = file == null ? 'Export cancelled.' : 'Backup downloaded: $file';
-    notifyListeners();
+    _setMessage(
+      file == null ? 'Export cancelled.' : 'Backup downloaded: $file',
+    );
   }
 
 
@@ -1339,10 +1374,11 @@ class AppController extends ChangeNotifier {
     // file represents the latest reconciled SlamDone state on this PC.
     await syncService.syncNow();
     final file = await repository.exportForAutivra4();
-    message = file == null
-        ? 'Autivra4 export cancelled.'
-        : 'Autivra4-compatible update JSON downloaded: $file';
-    notifyListeners();
+    _setMessage(
+      file == null
+          ? 'Autivra4 export cancelled.'
+          : 'Autivra4-compatible update JSON downloaded: $file',
+    );
   }
 
   Future<void> setFocusPanelHidden(bool hidden) async {
@@ -1432,8 +1468,7 @@ class AppController extends ChangeNotifier {
 
   void showFloatingTimer() {
     floatingTimerVisible = true;
-    message = 'Floating timer opened inside SlamDone.';
-    notifyListeners();
+    _setMessage('Floating timer opened inside SlamDone.');
   }
 
   void hideFloatingTimer() {
@@ -1443,6 +1478,7 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _messageClearTimer?.cancel();
     for (final timer in _autoArchiveTimers.values) {
       timer.cancel();
     }

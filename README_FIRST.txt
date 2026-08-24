@@ -1,34 +1,31 @@
-SlamDone V7.14.1 — COMBINED GITHUB BUILD + 5-SECOND UNDO HOTFIX
+SlamDone V7.14.3 — TABLE + JOURNAL CORRECTIVE HOTFIX
 
-Purpose
-=======
-This is one combined upload for the current SlamDone main branch after GitHub Actions run #43.
+This is a cumulative successor to:
+SlamDone V7.14.1 Combined Build + 5-Second Hotfix
+and includes the V7.14.2 corrective fixes.
 
-It contains ONLY the files needed to:
-1. Fix the Flutter web compile failure introduced by the Habit Month scrollbar change.
-2. Change the Focus Logged/Removed Undo message lifetime from 5 minutes to 5 seconds.
-3. Preserve the Flutter $FLUTTER_BASE_HREF placeholder required by the GitHub Pages build.
-4. Update the V7.14.1 repository contract test so it guards the corrected behavior.
+Fixed in this release
+=====================
+1. A newly created table now opens in a bounded two-axis editing canvas instead of falling into
+   the layout-recovery screen.
+2. New tables start with Topic / Status and one editable blank row. Add row and Add column remain
+   immediately available, along with row/column delete and resize controls.
+3. The default table title is now "New table" instead of "New study table".
+4. Every Journal card now has a directly visible trash button. Delete also remains in the
+   three-dot menu. Both ask for confirmation and then use the existing synced soft-delete flow.
+5. All V7.14.2 fixes remain included: Journal question-page loading, Habits checklist clicking,
+   five-second action/Undo messages, Focus naming, and Tables naming.
 
-Root cause fixed
-================
-V7.14.1 passed `crossAxisMargin` directly to Material `Scrollbar(...)`.
-Material Scrollbar does not expose that constructor parameter. The corrected code keeps
-Material Scrollbar and applies `crossAxisMargin: _dayHeaderHeight` through a LOCAL
-ScrollbarThemeData.copyWith(...) wrapper instead. This preserves the requested visible
-horizontal scrollbar directly under the day header without using an invalid constructor argument.
+Protected / unchanged
+=====================
+- Firebase/Firestore schema
+- local database schema
+- migration/import formats
+- planner hierarchy and saved layouts
+- focus ledger/history
+- existing journal/habit/table data
+- GitHub Pages base-href workflow
+- floating timer themes and browser-only timer behavior
 
-Upload instructions
-===================
-1. Extract this ZIP.
-2. Open the extracted SlamDone_V7_14_1_COMBINED_BUILD_5SEC_HOTFIX folder.
-3. Upload the CONTENTS of that folder into the ROOT of your existing SlamDone GitHub repository.
-4. Keep the folder paths exactly as shown and replace the four matching files:
-   - lib/src/screens/habits_screen.dart
-   - lib/src/screens/focus_screen.dart
-   - tool_tests/test_slamdone_v7141_usability_patch_contract.py
-   - web/index.html
-5. Commit once and let GitHub Actions run once.
-
-Do NOT delete Firebase, Firestore, progress, migration, journal, habit, focus, or user data.
-This patch changes no database schema and no stored user data.
+Use the ROOT OVERLAY ZIP for an existing V7.14.1 repository. The ZIP contains lib/, tool_tests/,
+and root files directly — there is no extra wrapper folder.

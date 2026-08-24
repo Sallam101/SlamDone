@@ -20,13 +20,14 @@ class SlamDoneV7141UsabilityPatchContractTest(unittest.TestCase):
 
     def test_habit_horizontal_scrollbar_is_under_day_header_and_today_is_auto_positioned(self):
         habits = self.read('lib/src/screens/habits_screen.dart')
-        self.assertIn('static const double _dayHeaderHeight = 60.0;', habits)
+        self.assertIn('static const double _dayLabelHeight = 60.0;', habits)
+        self.assertIn('static const double _dayHeaderHeight = _dayLabelHeight + 16.0;', habits)
         self.assertRegex(
             habits,
             r'scrollbarOrientation:\s*ScrollbarOrientation\.top,',
         )
         self.assertIn('ScrollbarTheme.of(context).copyWith(', habits)
-        self.assertIn('crossAxisMargin: _dayHeaderHeight,', habits)
+        self.assertIn('crossAxisMargin: _dayLabelHeight,', habits)
         self.assertNotRegex(
             habits,
             r'Scrollbar\(\s*controller: _horizontal,[\s\S]{0,240}?crossAxisMargin:',
@@ -70,9 +71,9 @@ class SlamDoneV7141UsabilityPatchContractTest(unittest.TestCase):
         web = self.read('web/index.html')
         self.assertIn('<base href="$FLUTTER_BASE_HREF">', web)
 
-    def test_release_version_is_7141(self):
+    def test_release_version_is_7142(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.1\+241\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243)\s*$')
 
 
 if __name__ == '__main__':

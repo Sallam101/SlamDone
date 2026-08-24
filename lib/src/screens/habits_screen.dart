@@ -13,7 +13,8 @@ class HabitsScreen extends StatefulWidget {
 }
 
 class _HabitsScreenState extends State<HabitsScreen> {
-  static const double _dayHeaderHeight = 60.0;
+  static const double _dayLabelHeight = 60.0;
+  static const double _dayHeaderHeight = _dayLabelHeight + 16.0;
 
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _mobileDate = DateTime.now();
@@ -83,7 +84,8 @@ class _HabitsScreenState extends State<HabitsScreen> {
                 .toDouble(),
     };
     final contentHeight =
-        60.0 + rowHeights.values.fold<double>(0, (sum, value) => sum + value);
+        _dayHeaderHeight +
+        rowHeights.values.fold<double>(0, (sum, value) => sum + value);
 
     return Padding(
       padding: const EdgeInsets.all(14),
@@ -186,7 +188,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
                         Expanded(
                           child: ScrollbarTheme(
                             data: ScrollbarTheme.of(context).copyWith(
-                              crossAxisMargin: _dayHeaderHeight,
+                              crossAxisMargin: _dayLabelHeight,
                             ),
                             child: Scrollbar(
                               controller: _horizontal,
@@ -1150,11 +1152,13 @@ class _DayHeader extends StatelessWidget {
     return SizedBox(
       height: _HabitsScreenState._dayHeaderHeight,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(days, (index) {
           final date = DateTime(month.year, month.month, index + 1);
           final current = sameDay(date, DateTime.now());
           return Container(
             width: 58,
+            height: _HabitsScreenState._dayLabelHeight,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: current ? Colors.green.withValues(alpha: 0.35) : null,
@@ -1332,7 +1336,7 @@ class _HabitTotalsColumn extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 60,
+            height: _HabitsScreenState._dayHeaderHeight,
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(

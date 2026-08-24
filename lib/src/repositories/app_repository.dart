@@ -284,7 +284,7 @@ class AppRepository {
       id: _uuid.v4(),
       title: title.trim().isEmpty ? 'Study table' : title.trim(),
       columnsJson: jsonEncode(['Topic', 'Status']),
-      rowsJson: '[]',
+      rowsJson: jsonEncode([['', '']]),
       sortKey: existing.isEmpty
           ? 1000
           : existing.map((item) => item.sortKey).reduce(_max) + 1000,
@@ -671,6 +671,18 @@ class AppRepository {
     );
     await database.saveJournal(updated);
     return updated;
+  }
+
+  Future<void> deleteJournal(JournalEntry entry) async {
+    final now = DateTime.now().toUtc();
+    await database.saveJournal(
+      entry.copyWith(
+        deletedAt: now,
+        updatedAt: now,
+        revision: entry.revision + 1,
+        deviceId: deviceId,
+      ),
+    );
   }
 
   Future<void> snapshotJournal(JournalEntry entry) async {

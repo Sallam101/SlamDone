@@ -1,15 +1,21 @@
-SlamDone V7.14.1 — GitHub Build Base-Href Hotfix
+SlamDone V7.14.3 — Cumulative GitHub root overlay
 
-This fixes the GitHub Actions failure:
-  Couldn't find the placeholder for base href.
-  Please add <base href="$FLUTTER_BASE_HREF"> to web/index.html
+PRIMARY USE: apply this overlay to the existing SlamDone repository that already has the
+V7.14.1 Combined Build + 5-Second Hotfix. It also contains the V7.14.2 corrective changes.
 
-UPLOAD:
-1. Extract this ZIP.
-2. Open the extracted SlamDone_V7_14_1_GITHUB_BUILD_BASE_HREF_HOTFIX folder.
-3. Upload the CONTENTS of that folder into the ROOT of the existing SlamDone GitHub repository.
-4. Preserve the web/ and tool_tests/ folders and replace web/index.html when GitHub asks.
-5. Commit the upload and let GitHub Actions run again.
+IMPORTANT: THIS ZIP HAS NO EXTRA WRAPPER FOLDER.
 
-This hotfix does NOT change Focus, habits, calendar, timer behavior, Firebase, or user data.
-It is safe to apply either before or after the separate 5-second Undo hotfix.
+1. Extract the ZIP.
+2. Inside the extracted location you will immediately see lib/, tool_tests/, pubspec.yaml, etc.
+3. Drag/upload those items into the ROOT of the existing SlamDone GitHub repository.
+4. Keep the folder paths and replace the matching files.
+5. Commit once and let the existing GitHub Pages workflow run.
+
+DATA SAFETY
+- No Firebase schema change.
+- No local SQLite/database schema change.
+- No migration-format change.
+- No deletion of existing user progress.
+- Journal Delete uses the existing soft-delete/tombstone pattern so Firebase sync propagates it.
+
+Version: 7.14.3+243
