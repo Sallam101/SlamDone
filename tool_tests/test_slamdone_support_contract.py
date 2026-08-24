@@ -21,10 +21,10 @@ class SlamDoneSupportContractTest(unittest.TestCase):
         self.assertIn('Support SlamDone', settings)
         self.assertIn('SlamDone got you productive?', settings)
         self.assertIn('Buy me a coffee', settings)
-        self.assertIn('one-time $5', settings)
+        self.assertIn(r'one-time \$5', settings)
         self.assertIn('Completely optional', settings)
         self.assertIn('Support SlamDone', home)
-        self.assertIn('One-time $5 thank-you', home)
+        self.assertIn(r'One-time \$5 thank-you', home)
         self.assertIn('SupportLinks.openPatreon', home)
         self.assertNotIn('patreon.com/api', brand.lower())
 

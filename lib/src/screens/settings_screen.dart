@@ -479,7 +479,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _section(context, 'Support SlamDone', [
           const Text(
-            'SlamDone got you productive? If it helped you stop planning and start finishing, you can leave a one-time $5 thank-you and support future improvements.',
+            'SlamDone got you productive? If it helped you stop planning and start finishing, you can leave a one-time \$5 thank-you and support future improvements.',
           ),
           const SizedBox(height: 6),
           Text(
@@ -492,7 +492,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: FilledButton.tonalIcon(
               onPressed: _openSupport,
               icon: const Icon(Icons.local_cafe_outlined),
-              label: const Text('Buy me a coffee · $5 one time'),
+              label: const Text('Buy me a coffee · \$5 one time'),
             ),
           ),
         ]),

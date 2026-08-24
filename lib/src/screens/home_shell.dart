@@ -290,7 +290,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                         ListTile(
                           leading: const Icon(Icons.local_cafe_outlined),
                           title: const Text('Support SlamDone'),
-                          subtitle: const Text('One-time $5 thank-you ☕'),
+                          subtitle: const Text('One-time \$5 thank-you ☕'),
                           onTap: () async {
                             Navigator.pop(context);
                             final opened = await SupportLinks.openPatreon();
