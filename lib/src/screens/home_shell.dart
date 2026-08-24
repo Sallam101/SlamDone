@@ -7,6 +7,7 @@ import '../controllers/app_controller.dart';
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
 import '../services/desktop_timer_bridge.dart';
+import '../services/support_links.dart';
 import '../widgets/floating_timer_overlay.dart';
 import '../widgets/slamdone_brand.dart';
 import 'big_picture_screen.dart';
@@ -285,6 +286,24 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                             },
                           );
                         }),
+                        const Divider(),
+                        ListTile(
+                          leading: const Icon(Icons.local_cafe_outlined),
+                          title: const Text('Support SlamDone'),
+                          subtitle: const Text('One-time $5 thank-you ☕'),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final opened = await SupportLinks.openPatreon();
+                            if (!mounted || opened) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not open Patreon. Please try again.',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),

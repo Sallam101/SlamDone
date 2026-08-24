@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/app_scope.dart';
 import '../models/models.dart';
+import '../services/support_links.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -475,7 +476,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'Your browser storage keeps the legacy internal database key for migration compatibility. Visible SlamDone branding and cloud sync are unaffected; app updates do not intentionally clear this data.',
           ),
         ]),
+        const SizedBox(height: 12),
+        _section(context, 'Support SlamDone', [
+          const Text(
+            'SlamDone got you productive? If it helped you stop planning and start finishing, you can leave a one-time $5 thank-you and support future improvements.',
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Completely optional — SlamDone stays free.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              onPressed: _openSupport,
+              icon: const Icon(Icons.local_cafe_outlined),
+              label: const Text('Buy me a coffee · $5 one time'),
+            ),
+          ),
+        ]),
       ],
+    );
+  }
+
+  Future<void> _openSupport() async {
+    final opened = await SupportLinks.openPatreon();
+    if (!mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open Patreon. Please try again.')),
     );
   }
 
