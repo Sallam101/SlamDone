@@ -92,7 +92,7 @@ class SlamDoneV7147ResponsivePatchContractTest(unittest.TestCase):
         self.assertIn('_buildSpreadsheetGrid(controller)', canvas)
 
     def test_release_version_is_7147(self):
-        self.assertIn('version: 7.14.7+247', self.read('pubspec.yaml'))
+        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.14\.(?:7\+247|8\+248)')
 
 
 if __name__ == '__main__':

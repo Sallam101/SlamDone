@@ -1,3 +1,12 @@
+# SlamDone changelog
+
+## V7.14.8 — Anonymous Analytics Patch
+- Added Firebase Analytics through the FlutterFire `firebase_analytics` SDK.
+- Added privacy-safe aggregate events for app opens, section usage, work-item creation/completion, habit check-ins, focus starts/completions, and cloud-sync adoption.
+- Added a Settings > Privacy & analytics opt-out switch. The preference is browser-local and is never synced to Firestore.
+- Analytics events never include user-authored planner content such as task titles, journal text, NorthStar text, habit names, table contents, email addresses, or record IDs.
+- Preserved the V7.14.7 responsive Tasks/Do First, theme/top-bar, timer, Tables fixes, and GitHub Flutter build hotfix.
+
 # V7.14.7 - Responsive filters, Do First queue, theme/timer polish + Tables stability
 
 - Reworked Tasks filters into a wrapping responsive layout so every filter remains reachable as the desktop/PWA window narrows. Tasks filters are visible by default and now have an explicit Show/Hide filters toggle.

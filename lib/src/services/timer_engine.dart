@@ -12,11 +12,15 @@ class TimerEngine extends ChangeNotifier {
     required this.database,
     required this.repository,
     required this.role,
+    this.onTimerStarted,
+    this.onSessionRecorded,
   });
 
   final LocalDatabase database;
   final AppRepository repository;
   final TimerOwner role;
+  final void Function(TimerMode mode)? onTimerStarted;
+  final void Function(TimeSession session)? onSessionRecorded;
   final Uuid _uuid = const Uuid();
   static const Duration suspensionGapThreshold = Duration(seconds: 5);
 
@@ -188,6 +192,7 @@ class TimerEngine extends ChangeNotifier {
       completionToken: _uuid.v4(),
     );
     await database.saveTimerState(_state);
+    onTimerStarted?.call(mode);
     notifyListeners();
   }
 
@@ -350,6 +355,7 @@ class TimerEngine extends ChangeNotifier {
       deviceId: repository.deviceId,
     );
     await repository.saveTimeSession(session);
+    onSessionRecorded?.call(session);
   }
 
   String formatSeconds(int totalSeconds) {

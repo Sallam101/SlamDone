@@ -7,6 +7,7 @@ import '../database/local_database.dart';
 import '../migration/migration_models.dart';
 import '../models/models.dart';
 import '../repositories/app_repository.dart';
+import '../services/app_analytics.dart';
 import '../services/sync_service.dart';
 import '../services/timer_engine.dart';
 import '../services/top_bar_theme_bridge.dart';
@@ -30,6 +31,7 @@ class AppController extends ChangeNotifier {
   final LocalDatabase database;
   final AppRepository repository;
 
+  final AppAnalytics analytics = AppAnalytics();
   late final SyncService syncService;
   late final TimerEngine timerEngine;
 
@@ -50,6 +52,7 @@ class AppController extends ChangeNotifier {
       : AppSection.doFirst;
   bool loading = true;
   bool focusPanelHidden = false;
+  bool analyticsEnabled = true;
   ThemeMode themeMode = ThemeMode.light;
   int accentColorValue = 0xFF4CAF7A;
   int topBarColorValue = 0;
@@ -235,13 +238,30 @@ class AppController extends ChangeNotifier {
       database: database,
       repository: repository,
       role: TimerOwner.main,
+      onTimerStarted: (mode) {
+        unawaited(analytics.logFocusStarted(mode.name));
+      },
+      onSessionRecorded: (session) {
+        if (session.completed) {
+          unawaited(analytics.logFocusCompleted(session.mode.name));
+        }
+      },
     );
     syncService.addListener(notifyListeners);
     timerEngine.addListener(_onTimerChanged);
     await _loadSettings();
+    await analytics.initialize(enabled: analyticsEnabled);
     await refreshAll();
     await timerEngine.initialize();
     await syncService.initialize();
+    await analytics.logAppOpened(
+      syncMode: syncService.mode,
+      signedIn: syncService.isSignedIn,
+    );
+    if (syncService.mode == 'firebase') {
+      await analytics.logCloudSyncEnabled(syncService.isSignedIn);
+    }
+    await analytics.logSectionOpened(selectedSection.name);
     loading = false;
     notifyListeners();
   }
@@ -249,6 +269,8 @@ class AppController extends ChangeNotifier {
   Future<void> _loadSettings() async {
     focusPanelHidden =
         (await database.getSetting('focus_panel_hidden')) == 'true';
+    analyticsEnabled =
+        (await database.getSetting('analytics_enabled')) != 'false';
     final savedTheme = await database.getSetting('theme_mode');
     themeMode = ThemeMode.values.firstWhere(
       (value) => value.name == savedTheme,
@@ -625,7 +647,11 @@ class AppController extends ChangeNotifier {
   }
 
   void selectSection(AppSection section) {
+    final changed = selectedSection != section;
     selectedSection = section;
+    if (changed) {
+      unawaited(analytics.logSectionOpened(section.name));
+    }
     notifyListeners();
   }
 
@@ -681,6 +707,7 @@ class AppController extends ChangeNotifier {
     );
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
+    unawaited(analytics.logWorkItemCreated(item.type.name));
     return item;
   }
 
@@ -690,6 +717,7 @@ class AppController extends ChangeNotifier {
       ..sort((a, b) => a.sortKey.compareTo(b.sortKey));
     notifyListeners();
     _scheduleCloudPush();
+    unawaited(analytics.logWorkItemCreated(item.type.name));
     return item;
   }
 
@@ -698,13 +726,18 @@ class AppController extends ChangeNotifier {
     await repository.updateWorkItem(item);
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
-    _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
+    final current = itemById(item.id);
+    if (!before.isCompleted && current?.isCompleted == true) {
+      unawaited(analytics.logWorkItemCompleted(current!.type.name));
+    }
+    _scheduleAutoArchiveIfNeeded(before, current);
   }
 
   Future<void> moveWorkItemToGtdStatus(
     WorkItem item,
     GtdStatus target,
   ) async {
+    final before = itemById(item.id) ?? item;
     final targetWorkStatus = target == GtdStatus.completed
         ? WorkStatus.completed
         : target == GtdStatus.archived
@@ -731,6 +764,10 @@ class AppController extends ChangeNotifier {
     );
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
+    final current = itemById(item.id);
+    if (!before.isCompleted && current?.isCompleted == true) {
+      unawaited(analytics.logWorkItemCompleted(current!.type.name));
+    }
   }
 
   Future<void> setWorkItemCompleted(WorkItem item, bool value) async {
@@ -741,8 +778,12 @@ class AppController extends ChangeNotifier {
     await repository.setWorkItemCompleted(item, value);
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
+    final current = itemById(item.id);
+    if (value && !before.isCompleted && current?.isCompleted == true) {
+      unawaited(analytics.logWorkItemCompleted(item.type.name));
+    }
     if (value) {
-      _scheduleAutoArchiveIfNeeded(before, itemById(item.id));
+      _scheduleAutoArchiveIfNeeded(before, current);
     }
   }
 
@@ -763,6 +804,9 @@ class AppController extends ChangeNotifier {
     await refreshWorkItemsAndLayouts();
     _scheduleCloudPush();
     final current = itemById(item.id);
+    if (!before.isCompleted && current?.isCompleted == true) {
+      unawaited(analytics.logWorkItemCompleted(current!.type.name));
+    }
     if (current != null && current.status != WorkStatus.completed) {
       _cancelPendingAutoArchive(item.id);
     } else {
@@ -997,6 +1041,9 @@ class AppController extends ChangeNotifier {
     await repository.setHabitValue(habit, dateKey, value);
     await refreshHabits();
     _scheduleCloudPush();
+    if (value > 0) {
+      unawaited(analytics.logHabitCheckIn(habit.kind.name));
+    }
   }
 
   Future<NorthStarNote> createNorthStarNote({
@@ -1234,6 +1281,22 @@ class AppController extends ChangeNotifier {
   Future<void> writeLocalUiSetting(String key, String value) async {
     await database.setSetting(key, value, enqueue: false);
   }
+
+  Future<void> setAnalyticsEnabled(bool enabled) async {
+    analyticsEnabled = enabled;
+    notifyListeners();
+    await writeLocalUiSetting('analytics_enabled', enabled.toString());
+    await analytics.setEnabled(enabled);
+    if (enabled) {
+      await analytics.logAppOpened(
+        syncMode: syncService.mode,
+        signedIn: syncService.isSignedIn,
+      );
+    }
+  }
+
+  Future<void> trackCloudSyncEnabled({required bool signedIn}) =>
+      analytics.logCloudSyncEnabled(signedIn);
 
   Future<void> setMindMapTextColor(String itemId, String? hex) async {
     final next = Map<String, String>.from(mindMapTextColors);

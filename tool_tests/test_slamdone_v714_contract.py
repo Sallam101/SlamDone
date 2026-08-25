@@ -98,7 +98,7 @@ class SlamDoneV714ContractTest(unittest.TestCase):
         pubspec = self.read('pubspec.yaml')
         workflow = self.read('.github/workflows/pages.yml')
         support = self.read('lib/src/services/support_links_web.dart')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243|4\+244|5\+245|6\+246|7\+247)\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243|4\+244|5\+245|6\+246|7\+247|8\+248)\s*$')
         self.assertNotIn('windows-latest', workflow)
         self.assertNotIn('companion:', workflow)
         self.assertIn('flutter build web --release --base-href /SlamDone/', workflow)

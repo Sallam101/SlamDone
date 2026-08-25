@@ -87,7 +87,7 @@ class SlamDoneV7145BrandTablesContractTest(unittest.TestCase):
         self.assertIn('textAlignVertical: TextAlignVertical.top', cell)
 
     def test_release_version_is_7147_or_later_patch(self):
-        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.14\.(?:6\+246|7\+247)')
+        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.14\.(?:6\+246|7\+247|8\+248)')
 
 
 if __name__ == '__main__':

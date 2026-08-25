@@ -58,6 +58,7 @@ class SyncService extends ChangeNotifier {
     'sync_mode',
     'floating_timer_command',
     'floating_timer_heartbeat',
+    'analytics_enabled',
   };
 
   static const int northStarImageChunkChars = 700000;

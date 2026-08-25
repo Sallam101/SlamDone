@@ -451,7 +451,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 if (!sync.isSignedIn)
                   FilledButton.icon(
-                    onPressed: sync.isBusy ? null : () => _googleSignIn(sync),
+                    onPressed: sync.isBusy ? null : () => _googleSignIn(controller, sync),
                     icon: const Icon(Icons.account_circle_outlined),
                     label: const Text('Continue with Google'),
                   ),
@@ -476,6 +476,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ]),
         ],
+        const SizedBox(height: 12),
+        _section(context, 'Privacy & analytics', [
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: controller.analyticsEnabled,
+            onChanged: controller.setAnalyticsEnabled,
+            title: const Text('Anonymous usage analytics'),
+            subtitle: const Text(
+              'Helps improve SlamDone by counting app usage and generic feature events. '
+              'Never sends task names, journal text, NorthStar content, habit names, or table contents.',
+            ),
+          ),
+          Text(
+            controller.analyticsEnabled
+                ? 'Analytics is on for this browser. You can turn it off at any time.'
+                : 'Analytics is off for this browser.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ]),
         const SizedBox(height: 12),
         _section(context, 'Local data', [
           const Text('SlamDone browser database'),
@@ -535,8 +554,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _googleSignIn(dynamic sync) async {
+  Future<void> _googleSignIn(dynamic controller, dynamic sync) async {
     final result = await sync.signInWithGoogle();
+    if (sync.mode == 'firebase') {
+      await controller.trackCloudSyncEnabled(signedIn: sync.isSignedIn);
+    }
     if (mounted) setState(() => _result = result);
   }
 
