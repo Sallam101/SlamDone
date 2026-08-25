@@ -133,7 +133,6 @@ class _DoFirstScreenState extends State<DoFirstScreen> {
                         ),
                       ),
                       TextButton.icon(
-                        tooltip: 'Do First filters',
                         onPressed: () =>
                             setState(() => _filtersVisible = !_filtersVisible),
                         icon: Icon(
