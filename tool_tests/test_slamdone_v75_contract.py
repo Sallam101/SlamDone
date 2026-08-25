@@ -23,8 +23,8 @@ class SlamDoneV75ContractTest(unittest.TestCase):
         self.assertIn('BoxConstraints.tightFor(height: 30)', timer)
         self.assertIn('bool _floatingTimerPinned = true', shell)
         self.assertIn('ScrollUpdateNotification', shell)
-        self.assertIn('minTimerWidth = desktop ? 156.0 : 148.0', shell)
-        self.assertIn('minTimerHeight = desktop ? 150.0 : 144.0', shell)
+        self.assertIn('minTimerWidth = desktop ? 124.0 : 116.0', shell)
+        self.assertIn('minTimerHeight = desktop ? 128.0 : 124.0', shell)
 
     def test_web_brand_uses_approved_png_icon_and_in_app_wordmark_adapts(self):
         brand = self.read('lib/src/widgets/slamdone_brand.dart')

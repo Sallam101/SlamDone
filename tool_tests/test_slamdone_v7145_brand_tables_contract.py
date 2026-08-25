@@ -79,15 +79,15 @@ class SlamDoneV7145BrandTablesContractTest(unittest.TestCase):
     def test_table_cells_avoid_expanding_textfield_layout_path_and_wrap_within_resized_cell(self):
         src = self.read('lib/src/screens/study_tables_screen.dart')
         start = src.index('Widget _buildEditableCell(')
-        end = src.index('void _addColumn(', start)
+        end = src.index('Future<void> _mutateGrid(', start)
         cell = src[start:end]
         self.assertNotIn('expands: wrapText', cell)
         self.assertIn('minLines: 1', cell)
         self.assertIn('maxLines: wrapText ? null : 1', cell)
         self.assertIn('textAlignVertical: TextAlignVertical.top', cell)
 
-    def test_release_version_is_7146(self):
-        self.assertIn('version: 7.14.6+246', self.read('pubspec.yaml'))
+    def test_release_version_is_7147_or_later_patch(self):
+        self.assertRegex(self.read('pubspec.yaml'), r'version: 7\.14\.(?:6\+246|7\+247)')
 
 
 if __name__ == '__main__':

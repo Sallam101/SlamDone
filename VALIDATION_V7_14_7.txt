@@ -1,0 +1,12 @@
+SlamDone V7.14.7 validation
+
+- Python source-contract/regression suite: 181 tests run; OK; 15 intentional legacy/native-companion skips.
+- New V7.14.7 regression contract covers Tasks responsive filters/toggle, Do First collapsed filters + priority buckets + added filters, default light/top-bar color setting, smaller timer + in-dial task title, and serialized/stable Tables grid mutation behavior.
+- JSON parse validation: web/manifest.json and firebase.json OK.
+- Protected data/sync files compared byte-for-byte against V7.14.6 and unchanged:
+  * lib/src/database/local_database.dart
+  * lib/src/repositories/app_repository.dart
+  * lib/src/services/sync_service.dart
+  * lib/src/migration/migration_models.dart
+  * firestore.rules
+- Flutter/Dart SDK is not installed in this execution environment, so a local flutter analyze/build could not be run here. The existing GitHub Pages workflow remains the compile/build gate after upload.

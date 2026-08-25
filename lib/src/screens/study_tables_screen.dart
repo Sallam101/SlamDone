@@ -251,6 +251,7 @@ class _EditableTableState extends State<_EditableTable> {
   final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController = ScrollController();
   Timer? _saveTimer;
+  bool _gridMutationInFlight = false;
 
   String get _preferenceKey => 'study_table_${widget.table.id}_display';
 
@@ -525,12 +526,14 @@ class _EditableTableState extends State<_EditableTable> {
                   ),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => _addColumn(controller),
+                  onPressed: _gridMutationInFlight
+                      ? null
+                      : () => _addColumn(controller),
                   icon: const Icon(Icons.add),
                   label: const Text('Add column'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: columns.isEmpty
+                  onPressed: _gridMutationInFlight || columns.isEmpty
                       ? null
                       : () => _chooseColumnToDelete(controller),
                   icon: const Icon(Icons.delete_outline),
@@ -541,14 +544,16 @@ class _EditableTableState extends State<_EditableTable> {
                   ),
                 ),
                 OutlinedButton.icon(
-                  onPressed: columns.isEmpty
+                  onPressed: _gridMutationInFlight || columns.isEmpty
                       ? null
                       : () => _deleteEmptyColumns(controller),
                   icon: const Icon(Icons.delete_sweep_outlined),
                   label: const Text('Delete empty columns'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => _addRow(controller),
+                  onPressed: _gridMutationInFlight
+                      ? null
+                      : () => _addRow(controller),
                   icon: const Icon(Icons.add),
                   label: const Text('Add row'),
                 ),
@@ -600,14 +605,17 @@ class _EditableTableState extends State<_EditableTable> {
       builder: (context, constraints) {
         final viewportWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
-            : totalWidth;
+            : 640.0;
         final viewportHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : 560.0;
         if (viewportWidth <= 0 || viewportHeight <= 0) {
           return const SizedBox.shrink();
         }
-        final canvasWidth = totalWidth < viewportWidth ? viewportWidth : totalWidth;
+        final safeWidth = totalWidth.isFinite && totalWidth > 0
+            ? totalWidth
+            : viewportWidth;
+        final canvasWidth = safeWidth < viewportWidth ? viewportWidth : safeWidth;
         return ClipRect(
           child: SingleChildScrollView(
             controller: _horizontalController,
@@ -618,7 +626,10 @@ class _EditableTableState extends State<_EditableTable> {
               child: SingleChildScrollView(
                 controller: _verticalController,
                 scrollDirection: Axis.vertical,
-                child: _buildSpreadsheetGrid(controller),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: canvasWidth),
+                  child: _buildSpreadsheetGrid(controller),
+                ),
               ),
             ),
           ),
@@ -789,61 +800,84 @@ class _EditableTableState extends State<_EditableTable> {
           width: selected ? 2 : 1,
         ),
       ),
-      child: TextFormField(
-        key: ValueKey('${widget.table.id}-$rowIndex-$columnIndex'),
-        initialValue: rows[rowIndex][columnIndex],
-        minLines: 1,
-        maxLines: wrapText ? null : 1,
-        textAlignVertical: TextAlignVertical.top,
-        style: TextStyle(
-          color: foreground,
-          fontSize: cellFontSize,
-          height: 1.15,
-          fontWeight: format['bold'] == true
-              ? FontWeight.w800
-              : FontWeight.normal,
-        ),
-        onTap: () => setState(() {
-          _selectedRowIndex = rowIndex;
-          _selectedCellColumnIndex = columnIndex;
-        }),
-        onChanged: (value) {
-          rows[rowIndex][columnIndex] = value;
-          _scheduleSave(controller);
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      child: ClipRect(
+        child: TextFormField(
+          key: ValueKey('${widget.table.id}-$rowIndex-$columnIndex'),
+          initialValue: rows[rowIndex][columnIndex],
+          minLines: 1,
+          maxLines: wrapText ? null : 1,
+          textAlignVertical: TextAlignVertical.top,
+          style: TextStyle(
+            color: foreground,
+            fontSize: cellFontSize,
+            height: 1.15,
+            fontWeight: format['bold'] == true
+                ? FontWeight.w800
+                : FontWeight.normal,
+          ),
+          onTap: () => setState(() {
+            _selectedRowIndex = rowIndex;
+            _selectedCellColumnIndex = columnIndex;
+          }),
+          onChanged: (value) {
+            rows[rowIndex][columnIndex] = value;
+            _scheduleSave(controller);
+          },
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+          ),
         ),
       ),
     );
   }
 
-  void _addColumn(AppController controller) {
+  Future<void> _mutateGrid(
+    AppController controller,
+    VoidCallback mutation,
+  ) async {
+    if (_gridMutationInFlight) return;
+    _saveTimer?.cancel();
     setState(() {
+      _gridMutationInFlight = true;
+      mutation();
+      _normalizeGridShape();
+    });
+    try {
+      await _save(controller);
+      await _savePreferences();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save table change: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _gridMutationInFlight = false);
+      }
+    }
+  }
+
+  Future<void> _addColumn(AppController controller) {
+    return _mutateGrid(controller, () {
       columns.add('Column ${columns.length + 1}');
       columnWidths.add(_defaultColumnWidth);
       for (final row in rows) {
         row.add('');
       }
-      _normalizeGridShape();
       _selectedColumnIndex = columns.length - 1;
     });
-    _save(controller);
-    _savePreferences();
   }
 
-  void _addRow(AppController controller) {
-    setState(() {
+  Future<void> _addRow(AppController controller) {
+    return _mutateGrid(controller, () {
       rows.add(List<String>.filled(columns.length, ''));
       rowHeights.add(_defaultRowHeight);
-      _normalizeGridShape();
       _selectedRowIndex = rows.length - 1;
       _selectedCellColumnIndex = columns.isEmpty ? null : 0;
     });
-    _save(controller);
-    _savePreferences();
   }
 
   void resizeRow(int rowIndex, double delta) {

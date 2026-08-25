@@ -22,8 +22,8 @@ class SlamDoneV7144TablesGtdContractTest(unittest.TestCase):
 
     def test_tables_add_helpers_are_repeatable_and_normalize_shape(self):
         src = self.read('lib/src/screens/study_tables_screen.dart')
-        self.assertIn('void _addColumn(AppController controller)', src)
-        self.assertIn('void _addRow(AppController controller)', src)
+        self.assertIn('Future<void> _addColumn(AppController controller)', src)
+        self.assertIn('Future<void> _addRow(AppController controller)', src)
         self.assertIn('void _normalizeGridShape()', src)
         self.assertIn("columns.add('Column ${columns.length + 1}')", src)
         self.assertIn("rows.add(List<String>.filled(columns.length, ''))", src)
@@ -68,7 +68,7 @@ class SlamDoneV7144TablesGtdContractTest(unittest.TestCase):
 
     def test_release_version_is_7144(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:4\+244|5\+245|6\+246)\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:4\+244|5\+245|6\+246|7\+247)\s*$')
 
 
 if __name__ == '__main__':

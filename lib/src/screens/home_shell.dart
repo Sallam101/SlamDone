@@ -121,8 +121,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     return LayoutBuilder(
       builder: (context, constraints) {
         final desktop = constraints.maxWidth >= 780;
-        final appBarBackground = Theme.of(context).appBarTheme.backgroundColor ??
-            Theme.of(context).colorScheme.surface;
+        final appBarBackground = controller.topBarColorValue == 0
+            ? (Theme.of(context).appBarTheme.backgroundColor ??
+                Theme.of(context).colorScheme.surface)
+            : Color(controller.topBarColorValue);
+        final appBarForeground = appBarBackground.computeLuminance() > .55
+            ? const Color(0xFF182019)
+            : Colors.white;
         final mobileSections = <AppSection>[
           AppSection.doFirst,
           AppSection.focus,
@@ -133,6 +138,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         return Scaffold(
           key: _scaffoldKey,
           appBar: AppBar(
+            backgroundColor: appBarBackground,
+            foregroundColor: appBarForeground,
             toolbarHeight: desktop ? 48 : 56,
             leading: desktop
                 ? null
@@ -312,8 +319,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                 ),
           body: LayoutBuilder(
             builder: (context, bodyConstraints) {
-              final minTimerWidth = desktop ? 156.0 : 148.0;
-              final minTimerHeight = desktop ? 150.0 : 144.0;
+              final minTimerWidth = desktop ? 124.0 : 116.0;
+              final minTimerHeight = desktop ? 128.0 : 124.0;
               final maxTimerWidth = (bodyConstraints.maxWidth - 16)
                   .clamp(minTimerWidth, 760.0)
                   .toDouble();

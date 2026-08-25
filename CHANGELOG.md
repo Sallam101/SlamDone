@@ -1,3 +1,12 @@
+# V7.14.7 - Responsive filters, Do First queue, theme/timer polish + Tables stability
+
+- Reworked Tasks filters into a wrapping responsive layout so every filter remains reachable as the desktop/PWA window narrows. Tasks filters are visible by default and now have an explicit Show/Hide filters toggle.
+- Reworked Do First controls into a responsive wrapping panel that starts collapsed by default. The default queue sorts urgent+overdue first, then overdue, then urgent+due, then due; added Category (including Uncategorized), Energy, and Recurrence filters plus Reset.
+- Changed a fresh/default SlamDone appearance to Light with the existing light-green accent, and added a configurable Top bar color in Settings with a web/PWA theme-color bridge for the installed window title bar.
+- Reduced the floating timer minimum size and added the active task title inside the timer dial while retaining the compact controls.
+- Serialized Tables row/column growth, normalizes grid shape before each structural save, bounds the two-axis canvas with a safe finite width, and clips cell editors to the resized row so repeated Add row/Add column actions do not enter the layout-recovery path.
+- No Firebase schema, SQLite schema, migration format, planner hierarchy, existing task/progress data, or sync ownership changes.
+
 # V7.14.6 - Windows taskbar brand icon hardening
 
 - Added explicit Windows PWA/taskbar icon sizes from 16px through 256px, including 44px app icon and common target sizes.

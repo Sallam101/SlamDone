@@ -75,8 +75,11 @@ class SlamDoneV79ContractTest(unittest.TestCase):
         self.assertIn('_showArchived = false', tasks)
         self.assertIn('_showUncategorized = false', tasks)
         self.assertIn('_smartFilterMatches', tasks)
-        self.assertIn('SingleChildScrollView', tasks)
-        self.assertIn('scrollDirection: Axis.horizontal', tasks)
+        filter_start = tasks.index('Widget _filterStrip(')
+        filter_end = tasks.index('Widget _smartChip(', filter_start)
+        filter_strip = tasks[filter_start:filter_end]
+        self.assertIn('Wrap(', filter_strip)
+        self.assertNotIn('scrollDirection: Axis.horizontal', filter_strip)
 
     def test_task_filter_preferences_are_local_per_device(self):
         tasks = read('lib/src/screens/tasks_screen.dart')

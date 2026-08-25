@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../repositories/app_repository.dart';
 import '../services/sync_service.dart';
 import '../services/timer_engine.dart';
+import '../services/top_bar_theme_bridge.dart';
 
 
 class AutoArchiveNotice {
@@ -49,8 +50,9 @@ class AppController extends ChangeNotifier {
       : AppSection.doFirst;
   bool loading = true;
   bool focusPanelHidden = false;
-  ThemeMode themeMode = ThemeMode.system;
+  ThemeMode themeMode = ThemeMode.light;
   int accentColorValue = 0xFF4CAF7A;
+  int topBarColorValue = 0;
   int backgroundColorValue = 0;
   int cardColorValue = 0;
   int textColorValue = 0;
@@ -250,11 +252,14 @@ class AppController extends ChangeNotifier {
     final savedTheme = await database.getSetting('theme_mode');
     themeMode = ThemeMode.values.firstWhere(
       (value) => value.name == savedTheme,
-      orElse: () => ThemeMode.system,
+      orElse: () => ThemeMode.light,
     );
     accentColorValue =
         int.tryParse(await database.getSetting('accent_color') ?? '') ??
         0xFF4CAF7A;
+    topBarColorValue =
+        int.tryParse(await database.getSetting('top_bar_color') ?? '') ?? 0;
+    applyTopBarThemeColor(topBarColorValue);
     backgroundColorValue =
         int.tryParse(await database.getSetting('background_color') ?? '') ?? 0;
     cardColorValue =
@@ -1078,6 +1083,14 @@ class AppController extends ChangeNotifier {
     _scheduleCloudPush();
   }
 
+  Future<void> setTopBarColor(int value) async {
+    topBarColorValue = value;
+    await database.setSetting('top_bar_color', value.toString());
+    applyTopBarThemeColor(value);
+    notifyListeners();
+    _scheduleCloudPush();
+  }
+
   Future<void> setBackgroundColor(int value) async {
     backgroundColorValue = value;
     await database.setSetting('background_color', value.toString());
@@ -1114,8 +1127,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> resetAppearance() async {
-    themeMode = ThemeMode.system;
+    themeMode = ThemeMode.light;
     accentColorValue = 0xFF4CAF7A;
+    topBarColorValue = 0;
     backgroundColorValue = 0;
     cardColorValue = 0;
     textColorValue = 0;
@@ -1123,6 +1137,8 @@ class AppController extends ChangeNotifier {
     fontFamily = defaultTargetPlatform == TargetPlatform.android ? 'Roboto' : 'Segoe UI';
     await database.setSetting('theme_mode', themeMode.name);
     await database.setSetting('accent_color', accentColorValue.toString());
+    await database.setSetting('top_bar_color', '0');
+    applyTopBarThemeColor(0);
     await database.setSetting('background_color', '0');
     await database.setSetting('card_color', '0');
     await database.setSetting('text_color', '0');

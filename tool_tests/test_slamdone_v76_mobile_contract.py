@@ -30,9 +30,10 @@ class SlamDoneV76MobileContractTest(unittest.TestCase):
     def test_tasks_have_compact_mobile_toolbar_and_actions(self):
         tasks = self.read('lib/src/screens/tasks_screen.dart')
         tree = self.read('lib/src/widgets/work_item_tree_list.dart')
-        self.assertIn('_mobileFiltersVisible', tasks)
+        self.assertIn('_filtersVisible', tasks)
         self.assertIn('_buildMobileToolbar', tasks)
-        self.assertIn("Icons.filter_alt_outlined", tasks)
+        self.assertIn("'Hide filters'", tasks)
+        self.assertIn("'Show filters'", tasks)
         self.assertIn('PopupMenuButton<String>', tree)
         self.assertIn("value: 'focus'", tree)
         self.assertIn("value: 'edit'", tree)

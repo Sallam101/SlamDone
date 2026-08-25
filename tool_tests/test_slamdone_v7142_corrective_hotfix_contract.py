@@ -78,7 +78,7 @@ class SlamDoneV7142CorrectiveHotfixContractTest(unittest.TestCase):
 
     def test_release_version_is_7142_or_later(self):
         pubspec = self.read('pubspec.yaml')
-        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243|4\+244|5\+245|6\+246)\s*$')
+        self.assertRegex(pubspec, r'(?m)^version:\s*7\.14\.(?:2\+242|3\+243|4\+244|5\+245|6\+246|7\+247)\s*$')
 
 
 if __name__ == '__main__':

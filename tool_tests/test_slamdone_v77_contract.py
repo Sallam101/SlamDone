@@ -59,8 +59,9 @@ class SlamDoneV77ContractTest(unittest.TestCase):
         northstar = self.read('lib/src/screens/northstar_screen.dart')
         self.assertIn('_mobileControlsVisible', journal)
         self.assertIn("tooltip: 'Journal controls'", journal)
-        self.assertIn('_mobileFiltersVisible', do_first)
-        self.assertIn("tooltip: 'Do First filters'", do_first)
+        self.assertIn('_filtersVisible', do_first)
+        self.assertIn("'Show filters'", do_first)
+        self.assertIn("'Hide filters'", do_first)
         self.assertIn('_mobileControlsVisible', northstar)
         self.assertIn("tooltip: 'NorthStar controls'", northstar)
 

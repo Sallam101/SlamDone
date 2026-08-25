@@ -78,6 +78,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _colorRow(
             context,
+            'Top bar',
+            controller.topBarColorValue,
+            controller.setTopBarColor,
+            allowDefault: true,
+          ),
+          _colorRow(
+            context,
             'Background',
             controller.backgroundColorValue,
             controller.setBackgroundColor,
@@ -644,48 +651,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
     int selected,
     Future<void> Function(int) onSelected, {
     bool allowDefault = false,
-  }) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
-    child: Row(
-      children: [
-        SizedBox(width: 115, child: Text(label)),
-        if (allowDefault)
-          Padding(
-            padding: const EdgeInsets.only(right: 7),
-            child: ChoiceChip(
-              label: const Text('Auto'),
-              selected: selected == 0,
-              onSelected: (_) => onSelected(0),
-            ),
-          ),
-        ..._palette.map(
-          (value) => Padding(
-            padding: const EdgeInsets.only(right: 7),
-            child: InkWell(
-              onTap: () => onSelected(value),
-              child: Container(
-                width: 31,
-                height: 31,
-                decoration: BoxDecoration(
-                  color: Color(value),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected == value
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Colors.transparent,
-                    width: 3,
-                  ),
-                ),
-                child: selected == value
-                    ? const Icon(Icons.check, color: Colors.white, size: 17)
-                    : null,
+  }) {
+    final choices = <Widget>[
+      if (allowDefault)
+        ChoiceChip(
+          label: const Text('Auto'),
+          selected: selected == 0,
+          onSelected: (_) => onSelected(0),
+        ),
+      ..._palette.map(
+        (value) => InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => onSelected(value),
+          child: Container(
+            width: 31,
+            height: 31,
+            decoration: BoxDecoration(
+              color: Color(value),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected == value
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Colors.transparent,
+                width: 3,
               ),
             ),
+            child: selected == value
+                ? const Icon(Icons.check, color: Colors.white, size: 17)
+                : null,
           ),
         ),
-      ],
-    ),
-  );
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final palette = Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: choices,
+          );
+          if (constraints.maxWidth < 650) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label),
+                const SizedBox(height: 6),
+                palette,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 115, child: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(label),
+              )),
+              Expanded(child: palette),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
 
   static const _palette = [
     0xFF4CAF7A,

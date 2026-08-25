@@ -324,6 +324,7 @@ class _SlamDoneFloatingTimerOverlayState
               density: density,
               displaySeconds: displaySeconds,
               progress: progress,
+              title: title,
             ),
           ),
         ),
@@ -446,6 +447,7 @@ class _SlamDoneFloatingTimerOverlayState
     required _TimerDensity density,
     required int displaySeconds,
     required double progress,
+    required String title,
   }) {
     final state = engine.state;
     return LayoutBuilder(
@@ -466,7 +468,7 @@ class _SlamDoneFloatingTimerOverlayState
           constraints.maxWidth - (mini ? 4 : 10),
           constraints.maxHeight - controlHeight - (mini ? 4 : 8),
         );
-        final dialSize = available.clamp(58.0, dialMax).toDouble();
+        final dialSize = available.clamp(50.0, dialMax).toDouble();
         final timeSize = (dialSize * .28).clamp(19.0, 54.0).toDouble();
 
         return Column(
@@ -498,7 +500,22 @@ class _SlamDoneFloatingTimerOverlayState
                                   ),
                             ),
                           ),
-                          if (dialSize >= 72)
+                          if (dialSize >= 50)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 5),
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      fontSize: (dialSize * .07).clamp(7.0, 11.0),
+                                      fontWeight: FontWeight.w800,
+                                      height: 1,
+                                    ),
+                              ),
+                            ),
+                          if (dialSize >= 105)
                             Text(
                               state.mode == TimerMode.stopwatch
                                   ? 'STOPWATCH'
