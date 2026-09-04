@@ -1,0 +1,54 @@
+name: Publish SlamDone 7.14.9 Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-v7149-windows.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      WIN_ARTIFACT_URL: 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-6374-81fd-b50e-3bd73bbfc448/raw?se=2026-09-04T07%3A44%3A54Z&sp=r&sv=2026-02-06&sr=b&scid=e5a0067c-b2d8-5d73-b196-faf17cc074f5&skoid=5e713cdb-766b-475e-a3ca-8adb6cf99aa0&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-04T03%3A23%3A46Z&ske=2026-09-05T03%3A23%3A46Z&sks=b&skv=2026-02-06&sig=IfzGLX7TYW7HzW9tCAzN3L6p4owG6gyx854Dl%2B7Fbi4%3D'
+      EXPECTED_SHA256: '3d874cfb8b38451762315dd687a130957d0b2050eb47012adfd5aaf7bad03952'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - name: Download verified installer artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors "$WIN_ARTIFACT_URL" -o /tmp/windows-artifact.zip
+          unzip -q /tmp/windows-artifact.zip -d /tmp/windows-artifact
+          test -s /tmp/windows-artifact/SlamDone-Setup-7.14.9.exe
+          echo "$EXPECTED_SHA256  /tmp/windows-artifact/SlamDone-Setup-7.14.9.exe" | sha256sum -c -
+      - name: Publish to public release-assets branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'SlamDone Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin release-assets >/dev/null 2>&1; then
+            git fetch origin release-assets:release-assets
+            git switch release-assets
+          else
+            git switch --orphan release-assets
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p v7.14.9
+          cp /tmp/windows-artifact/SlamDone-Setup-7.14.9.exe v7.14.9/
+          cp /tmp/windows-artifact/SHA256SUMS-Windows.txt v7.14.9/
+          cat > README.md <<'EOF'
+          # SlamDone Public Downloads
+
+          Official public download assets for SlamDone. Use links published on https://slamdone.com.
+          EOF
+          git add README.md v7.14.9/SlamDone-Setup-7.14.9.exe v7.14.9/SHA256SUMS-Windows.txt
+          git commit -m 'release: publish SlamDone 7.14.9 Windows installer' || true
+          git push origin release-assets
