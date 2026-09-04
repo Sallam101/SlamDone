@@ -1,0 +1,78 @@
+name: Publish SlamDone v7.14.9 Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.android-publication-trigger'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-v7149-android
+  cancel-in-progress: false
+
+env:
+  SOURCE_URL: 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-18c8-81fd-b461-891bcc74cc9b/raw?se=2026-09-04T12%3A51%3A30Z&sp=r&sv=2026-02-06&sr=b&scid=bd402d97-d9f1-5325-b0da-c66df72dec5a&skoid=5e713cdb-766b-475e-a3ca-8adb6cf99aa0&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-04T03%3A09%3A08Z&ske=2026-09-05T03%3A09%3A08Z&sks=b&skv=2026-02-06&sig=%2B0i1XMVr62D4VTO9WyXdF4LUD3dsO8qiQkfZGIPKzb0%3D'
+  EXPECTED_SHA256: '7ed738d8149389b6ed5443ac900af5d17271b92db971ff6025364ffbcae5aa8e'
+  APK_NAME: 'SlamDone-Android-7.14.9-beta.apk'
+
+jobs:
+  publish:
+    name: Mirror verified APK to public release assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download and verify private-build artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/slamdone-android
+          curl --fail --location --retry 4 --retry-delay 2 "$SOURCE_URL" -o /tmp/slamdone-android/artifact.zip
+          unzip -q /tmp/slamdone-android/artifact.zip -d /tmp/slamdone-android/unpacked
+          APK="$(find /tmp/slamdone-android/unpacked -type f -name '*.apk' -print -quit)"
+          test -n "$APK"
+          ACTUAL="$(sha256sum "$APK" | awk '{print $1}')"
+          test "$ACTUAL" = "$EXPECTED_SHA256"
+          cp "$APK" "/tmp/slamdone-android/$APK_NAME"
+
+      - name: Add APK without replacing existing Windows assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin release-assets:release-assets
+          git switch release-assets
+          mkdir -p v7.14.9
+          cp "/tmp/slamdone-android/$APK_NAME" "v7.14.9/$APK_NAME"
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$APK_NAME" > v7.14.9/SHA256SUMS-Android.txt
+          git add "v7.14.9/$APK_NAME" v7.14.9/SHA256SUMS-Android.txt
+          if git diff --cached --quiet; then
+            echo 'Public Android APK is already current.'
+            exit 0
+          fi
+          git commit -m 'release(android): publish SlamDone 7.14.9 beta APK'
+          git push origin release-assets
+
+      - name: Verify public raw origin
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://raw.githubusercontent.com/Sallam101/SlamDone/release-assets/v7.14.9/$APK_NAME"
+          for attempt in 1 2 3 4 5; do
+            code="$(curl -L -sS -o /dev/null -w '%{http_code}' "$URL" || true)"
+            if [ "$code" = '200' ]; then
+              echo "Public APK verified: $URL"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'APK was committed, but raw.githubusercontent.com has not propagated yet.' >&2
+          exit 1
