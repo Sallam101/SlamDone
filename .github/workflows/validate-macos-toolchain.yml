@@ -1,0 +1,35 @@
+name: Validate macOS Google sign-in toolchain
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/validate-macos-toolchain.yml'
+
+jobs:
+  validate:
+    runs-on: macos-15-intel
+    steps:
+      - name: Install pinned Flutter 3.44.8
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.44.8-stable.zip -o /tmp/flutter.zip
+          unzip -q /tmp/flutter.zip -d "$RUNNER_TEMP/flutter-sdk"
+          echo "$RUNNER_TEMP/flutter-sdk/flutter/bin" >> "$GITHUB_PATH"
+      - name: Create clean macOS probe with current Google sign-in
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$RUNNER_TEMP/flutter-sdk/flutter/bin:$PATH"
+          flutter config --enable-macos-desktop --enable-swift-package-manager
+          flutter create --platforms=macos --org com.slamdone /tmp/slamdone-macos-probe
+          cd /tmp/slamdone-macos-probe
+          flutter pub add google_sign_in:7.2.0
+          cat > pubspec_overrides.yaml <<'EOF'
+          dependency_overrides:
+            google_sign_in_ios: 6.3.3
+          EOF
+          flutter pub get
+          flutter build macos --release
