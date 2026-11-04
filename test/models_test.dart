@@ -1,7 +1,83 @@
 import 'package:slamdone/src/models/models.dart';
+import 'package:slamdone/src/utils/app_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('75-day focus streak survives Denver fall-back DST transition', () {
+    final sessions = <TimeSession>[
+      for (var offset = 0; offset < 75; offset++)
+        TimeSession(
+          id: 'session-$offset',
+          mode: TimerMode.general,
+          title: 'Focus',
+          plannedSeconds: 1500,
+          elapsedSeconds: 1500,
+          startedAt: DateTime(2026, 11, 3 - offset, 12).toUtc(),
+          endedAt: DateTime(2026, 11, 3 - offset, 12, 25).toUtc(),
+          completed: true,
+          createdAt: DateTime.utc(2026, 11, 3),
+          updatedAt: DateTime.utc(2026, 11, 3),
+          revision: 1,
+          deviceId: 'test',
+        ),
+    ];
+    expect(calculateFocusDayStreak(sessions, DateTime(2026, 11, 3, 12)), 75);
+  });
+
+  test('date-only habit keys remain on their local calendar date', () {
+    final nov4 = parseDateKey('2026-11-04');
+    expect(nov4, isNotNull);
+    expect(dateKey(nov4!), '2026-11-04');
+    expect(nov4.hour, 0);
+    expect(parseDateKey('2026-02-30'), isNull);
+    expect(parseDateKey('2026-11-04T00:00:00Z'), isNull);
+  });
+
+  test('focus streak ignores deleted and stopwatch sessions', () {
+    final nov3 = DateTime(2026, 11, 3, 12).toUtc();
+    final deleted = TimeSession(
+      id: 'deleted',
+      mode: TimerMode.focus,
+      title: 'Deleted',
+      plannedSeconds: 1500,
+      elapsedSeconds: 1500,
+      startedAt: nov3,
+      endedAt: nov3.add(const Duration(minutes: 25)),
+      completed: true,
+      createdAt: nov3,
+      updatedAt: nov3,
+      revision: 1,
+      deviceId: 'test',
+      deletedAt: nov3,
+    );
+    final stopwatch = TimeSession(
+      id: 'stopwatch',
+      mode: TimerMode.stopwatch,
+      title: 'Stopwatch',
+      plannedSeconds: 0,
+      elapsedSeconds: 1500,
+      startedAt: nov3,
+      endedAt: nov3.add(const Duration(minutes: 25)),
+      completed: true,
+      createdAt: nov3,
+      updatedAt: nov3,
+      revision: 1,
+      deviceId: 'test',
+    );
+    expect(calculateFocusDayStreak([deleted, stopwatch], DateTime(2026, 11, 3, 18)), 0);
+  });
+
+  test('calendar day arithmetic preserves midnight through DST', () {
+    final nov1 = DateTime(2026, 11, 1);
+    final nov2 = addCalendarDays(nov1, 1);
+    final nov3 = addCalendarDays(nov2, 1);
+    expect(dateKey(nov2), '2026-11-02');
+    expect(dateKey(nov3), '2026-11-03');
+    expect(nov2.hour, 0);
+    expect(nov3.hour, 0);
+  });
+
+
   test('checklist progress clamps to two hundred units', () {
     final now = DateTime.utc(2026, 8, 1);
     final item = WorkItem(
