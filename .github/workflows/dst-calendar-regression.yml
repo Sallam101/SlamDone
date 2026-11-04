@@ -1,0 +1,29 @@
+name: Denver DST calendar regression
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dst-regression:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Denver
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.44.8'
+          cache: true
+      - name: Install packages
+        run: flutter pub get
+      - name: Run Denver DST regression tests
+        run: flutter test test/models_test.dart
+      - name: Run complete Flutter test suite
+        run: flutter test
