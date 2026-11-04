@@ -46,7 +46,6 @@ int calculateFocusDayStreak(Iterable<TimeSession> sessions, DateTime now) {
       .where(
         (session) =>
             session.completed &&
-            session.deletedAt == null &&
             session.mode != TimerMode.stopwatch,
       )
       .map((session) => startOfDay(session.startedAt.toLocal()))
