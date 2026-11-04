@@ -33,7 +33,7 @@ void main() {
     expect(parseDateKey('2026-11-04T00:00:00Z'), isNull);
   });
 
-  test('focus streak ignores deleted and stopwatch sessions', () {
+  test('focus streak counts permanent completed history and ignores stopwatches', () {
     final nov3 = DateTime(2026, 11, 3, 12).toUtc();
     final deleted = TimeSession(
       id: 'deleted',
@@ -64,7 +64,7 @@ void main() {
       revision: 1,
       deviceId: 'test',
     );
-    expect(calculateFocusDayStreak([deleted, stopwatch], DateTime(2026, 11, 3, 18)), 0);
+    expect(calculateFocusDayStreak([deleted, stopwatch], DateTime(2026, 11, 3, 18)), 1);
   });
 
   test('calendar day arithmetic preserves midnight through DST', () {
