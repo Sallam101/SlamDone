@@ -239,7 +239,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 context,
                 'Deep focus sessions',
                 controller.sessions
-                    .where((session) => session.deletedAt == null && session.completed && session.mode != TimerMode.stopwatch && _inPeriod(session.startedAt, currentRange))
+                    .where((session) => session.completed && session.mode != TimerMode.stopwatch && _inPeriod(session.startedAt, currentRange))
                     .map((session) => '${session.title} • ${(session.elapsedSeconds / 60).round()} min • ${dateKey(session.startedAt.toLocal())}')
                     .toList(),
               ),
@@ -745,7 +745,6 @@ _PeriodStats _buildStats(
   final periodSessions = sessions
       .where(
         (session) =>
-            session.deletedAt == null &&
             session.completed &&
             session.mode != TimerMode.stopwatch &&
             inRange(session.startedAt),
@@ -1740,10 +1739,9 @@ List<_DailyTrendPoint> _buildDailyTrend(
 
     final focusMinutes = sessions
         .where((session) =>
-            session.deletedAt == null &&
             session.completed &&
             session.mode != TimerMode.stopwatch &&
-            sameDay(session.startedAt))
+            sameDay(session.startedAt.toLocal()))
         .fold<int>(0, (sum, session) => sum + (session.elapsedSeconds / 60).round());
     final completed = items
         .where((item) => !item.isDeleted && item.isCompleted && sameDay(item.updatedAt))
@@ -1968,7 +1966,7 @@ List<_ProjectFocus> _buildProjectFocus(
   final byId = {for (final item in items.where((item) => !item.isDeleted)) item.id: item};
   final totals = <String, int>{};
   for (final session in sessions) {
-    if (session.deletedAt != null || !session.completed || session.mode == TimerMode.stopwatch || !_inPeriod(session.startedAt, range)) continue;
+    if (!session.completed || session.mode == TimerMode.stopwatch || !_inPeriod(session.startedAt, range)) continue;
     var title = 'General focus';
     if (session.workItemId != null) {
       var current = byId[session.workItemId!];
