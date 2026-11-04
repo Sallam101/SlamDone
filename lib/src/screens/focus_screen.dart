@@ -51,7 +51,7 @@ class _FocusScreenState extends State<FocusScreen> {
     }
 
     final weekStart = startOfIsoWeek(now);
-    final weekEnd = weekStart.add(const Duration(days: 7));
+    final weekEnd = addCalendarDays(weekStart, 7);
     final monthStart = DateTime(now.year, now.month, 1);
     final monthEnd = DateTime(now.year, now.month + 1, 1);
 
@@ -177,7 +177,7 @@ class _FocusScreenState extends State<FocusScreen> {
             final weekly = _PeriodGoalPanel(
               title: 'This week’s focus goal',
               rangeLabel:
-                  '${dateKey(weekStart)}–${dateKey(weekEnd.subtract(const Duration(days: 1)))}',
+                  '${dateKey(weekStart)}–${dateKey(addCalendarDays(weekEnd, -1))}',
               sessionGoal: controller.weeklySessionGoal,
               dayGoal: controller.weeklyFocusDaysGoal,
               completedSessions: controller.completedSessionCountBetween(
@@ -1096,7 +1096,7 @@ class _YearWeekStripState extends State<_YearWeekStrip> {
         _hoveredWeek ??
         (widget.year == isoWeekYear(now) ? isoWeekNumber(now) : 1);
     final selectedStart = isoWeekStart(widget.year, selectedWeek);
-    final selectedEnd = selectedStart.add(const Duration(days: 7));
+    final selectedEnd = addCalendarDays(selectedStart, 7);
     final selectedSeconds = _focusSecondsBetween(
       widget.controller.sessions,
       selectedStart,
@@ -1111,7 +1111,7 @@ class _YearWeekStripState extends State<_YearWeekStrip> {
           children: List.generate(weeks, (index) {
             final week = index + 1;
             final start = isoWeekStart(widget.year, week);
-            final end = start.add(const Duration(days: 7));
+            final end = addCalendarDays(start, 7);
             final seconds = _focusSecondsBetween(
               widget.controller.sessions,
               start,
@@ -1122,7 +1122,7 @@ class _YearWeekStripState extends State<_YearWeekStrip> {
             final isHovered = week == _hoveredWeek;
             return Tooltip(
               message:
-                  'Week $week • ${dateKey(start)}–${dateKey(end.subtract(const Duration(days: 1)))} • ${_focusDuration(seconds)}',
+                  'Week $week • ${dateKey(start)}–${dateKey(addCalendarDays(end, -1))} • ${_focusDuration(seconds)}',
               child: MouseRegion(
                 onEnter: (_) => setState(() => _hoveredWeek = week),
                 onExit: (_) {
@@ -1177,7 +1177,7 @@ class _YearWeekStripState extends State<_YearWeekStrip> {
         const SizedBox(height: 10),
         _FocusGlance(
           text:
-              'Week $selectedWeek • ${dateKey(selectedStart)}–${dateKey(selectedEnd.subtract(const Duration(days: 1)))} • ${_focusDuration(selectedSeconds)} completed focus',
+              'Week $selectedWeek • ${dateKey(selectedStart)}–${dateKey(addCalendarDays(selectedEnd, -1))} • ${_focusDuration(selectedSeconds)} completed focus',
         ),
       ],
     );
@@ -1388,14 +1388,14 @@ Future<void> _showFocusBreakdown(
   for (
     var day = DateTime(start.year, start.month, start.day);
     day.isBefore(endExclusive);
-    day = day.add(const Duration(days: 1))
+    day = addCalendarDays(day, 1)
   ) {
     days.add((
       day: day,
       seconds: _focusSecondsBetween(
         sessions,
         day,
-        day.add(const Duration(days: 1)),
+        addCalendarDays(day, 1),
       ),
     ));
   }
