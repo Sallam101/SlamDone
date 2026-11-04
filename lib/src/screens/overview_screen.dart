@@ -597,7 +597,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   String _periodLabel(_PeriodRange range, _OverviewPeriod period) => switch (period) {
     _OverviewPeriod.week => 'Week ${isoWeekNumber(range.start)} • ${dateKey(range.start)} to ${dateKey(addCalendarDays(range.end, -1))}',
     _OverviewPeriod.month => '${_monthName(range.start.month)} ${range.start.year}',
-    _OverviewPeriod.quarter => 'Q${((range.start.month - 1) ~/ 3) + 1} ${range.start.year} • ${_monthName(range.start.month)} to ${_monthName(range.end.subtract(const Duration(days: 1)).month)}',
+    _OverviewPeriod.quarter => 'Q${((range.start.month - 1) ~/ 3) + 1} ${range.start.year} • ${_monthName(range.start.month)} to ${_monthName(addCalendarDays(range.end, -1).month)}',
     _OverviewPeriod.year => '${range.start.year}',
   };
 
@@ -1732,7 +1732,7 @@ List<_DailyTrendPoint> _buildDailyTrend(
 ) {
   final result = <_DailyTrendPoint>[];
   for (var day = range.start; day.isBefore(range.end); day = addCalendarDays(day, 1)) {
-    final next = day.add(const Duration(days: 1));
+    final next = addCalendarDays(day, 1);
     bool sameDay(DateTime value) {
       final local = value.toLocal();
       return !local.isBefore(day) && local.isBefore(next);
