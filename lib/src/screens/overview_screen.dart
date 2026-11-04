@@ -285,7 +285,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 'Habit check-ins',
                 controller.habitEntries
                     .where((entry) {
-                      final day = DateTime.tryParse(entry.entryDate);
+                      final day = parseDateKey(entry.entryDate);
                       return entry.deletedAt == null && entry.value > 0 && day != null && !day.isBefore(currentRange.start) && day.isBefore(currentRange.end);
                     })
                     .map((entry) => '${entry.entryDate} • ${entry.value.toStringAsFixed(entry.value % 1 == 0 ? 0 : 1)}')
@@ -556,7 +556,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     switch (period) {
       case _OverviewPeriod.week:
         final start = startOfIsoWeek(anchor);
-        return _PeriodRange(start, start.add(const Duration(days: 7)));
+        return _PeriodRange(start, addCalendarDays(start, 7));
       case _OverviewPeriod.month:
         final start = DateTime(anchor.year, anchor.month);
         return _PeriodRange(start, DateTime(anchor.year, anchor.month + 1));
@@ -571,7 +571,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   }
 
   DateTime _shiftAnchor(DateTime anchor, _OverviewPeriod period, int amount) => switch (period) {
-    _OverviewPeriod.week => anchor.add(Duration(days: 7 * amount)),
+    _OverviewPeriod.week => addCalendarDays(anchor, 7 * amount),
     _OverviewPeriod.month => DateTime(anchor.year, anchor.month + amount, 1),
     _OverviewPeriod.quarter => DateTime(anchor.year, anchor.month + 3 * amount, 1),
     _OverviewPeriod.year => DateTime(anchor.year + amount, anchor.month, 1),
@@ -595,7 +595,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   };
 
   String _periodLabel(_PeriodRange range, _OverviewPeriod period) => switch (period) {
-    _OverviewPeriod.week => 'Week ${isoWeekNumber(range.start)} • ${dateKey(range.start)} to ${dateKey(range.end.subtract(const Duration(days: 1)))}',
+    _OverviewPeriod.week => 'Week ${isoWeekNumber(range.start)} • ${dateKey(range.start)} to ${dateKey(addCalendarDays(range.end, -1))}',
     _OverviewPeriod.month => '${_monthName(range.start.month)} ${range.start.year}',
     _OverviewPeriod.quarter => 'Q${((range.start.month - 1) ~/ 3) + 1} ${range.start.year} • ${_monthName(range.start.month)} to ${_monthName(range.end.subtract(const Duration(days: 1)).month)}',
     _OverviewPeriod.year => '${range.start.year}',
@@ -772,7 +772,7 @@ _PeriodStats _buildStats(
     for (final entry in habitEntries.where(
       (entry) => entry.deletedAt == null && entry.habitId == habit.id,
     )) {
-      final day = DateTime.tryParse(entry.entryDate)?.toLocal();
+      final day = parseDateKey(entry.entryDate);
       if (day != null &&
           !day.isBefore(range.start) &&
           day.isBefore(range.end)) {
@@ -784,7 +784,7 @@ _PeriodStats _buildStats(
     for (
       var day = range.start;
       day.isBefore(range.end);
-      day = day.add(const Duration(days: 1))
+      day = addCalendarDays(day, 1)
     ) {
       final daysInMonth = DateTime(day.year, day.month + 1, 0).day;
       target += habit.monthGoal / math.max(1, daysInMonth);
@@ -877,8 +877,8 @@ List<_PeriodRange> _trendBucketRange(
     return buckets;
   }
   final stepDays = period == _OverviewPeriod.quarter ? 7 : 1;
-  for (var start = range.start; start.isBefore(range.end); start = start.add(Duration(days: stepDays))) {
-    final candidateEnd = start.add(Duration(days: stepDays));
+  for (var start = range.start; start.isBefore(range.end); start = addCalendarDays(start, stepDays)) {
+    final candidateEnd = addCalendarDays(start, stepDays);
     final end = candidateEnd.isAfter(range.end) ? range.end : candidateEnd;
     buckets.add(_PeriodRange(start, end));
   }
@@ -1731,7 +1731,7 @@ List<_DailyTrendPoint> _buildDailyTrend(
   _PeriodRange range,
 ) {
   final result = <_DailyTrendPoint>[];
-  for (var day = range.start; day.isBefore(range.end); day = day.add(const Duration(days: 1))) {
+  for (var day = range.start; day.isBefore(range.end); day = addCalendarDays(day, 1)) {
     final next = day.add(const Duration(days: 1));
     bool sameDay(DateTime value) {
       final local = value.toLocal();
