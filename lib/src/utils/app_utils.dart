@@ -29,7 +29,41 @@ DateTime addCalendarDays(DateTime value, int days) =>
 /// Parses a YYYY-MM-DD key as a calendar date, not a UTC timestamp.
 DateTime? parseDateKey(String? value) {
   if (value == null) return null;
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+  if (match == null) return null;
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final day = int.parse(match.group(3)!);
+  final parsed = DateTime(year, month, day);
+  if (parsed.year != year || parsed.month != month || parsed.day != day) {
+    return null;
+  }
+  return parsed;
+}
+
+/// Counts consecutive local dates with completed, non-deleted focus sessions.
+int calculateFocusDayStreak(Iterable<TimeSession> sessions, DateTime now) {
+  final completedDays = sessions
+      .where(
+        (session) =>
+            session.completed &&
+            session.deletedAt == null &&
+            session.mode != TimerMode.stopwatch,
+      )
+      .map((session) => startOfDay(session.startedAt.toLocal()))
+      .toSet();
+  var cursor = startOfDay(now);
+  if (!completedDays.contains(cursor)) {
+    cursor = addCalendarDays(cursor, -1);
+  }
+  var streak = 0;
+  while (completedDays.contains(cursor)) {
+    streak++;
+    cursor = addCalendarDays(cursor, -1);
+  }
+  return streak;
+}
+
 bool sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
