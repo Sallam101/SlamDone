@@ -11,7 +11,7 @@ Color? parseHexColor(String? value) {
 }
 
 String toHexColor(Color color) =>
-    '#\${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+    '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
 
 Color readableTextColor(Color background) =>
     ThemeData.estimateBrightnessForColor(background) == Brightness.dark
@@ -67,7 +67,7 @@ bool sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
 String dateKey(DateTime value) =>
-    '\${value.year.toString().padLeft(4, '0')}-\${value.month.toString().padLeft(2, '0')}-\${value.day.toString().padLeft(2, '0')}';
+    '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
 DateTime startOfIsoWeek(DateTime value) {
   final local = startOfDay(value);
