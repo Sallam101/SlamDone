@@ -72,24 +72,24 @@ String dateKey(DateTime value) =>
 
 DateTime startOfIsoWeek(DateTime value) {
   final local = startOfDay(value);
-  return local.subtract(Duration(days: local.weekday - DateTime.monday));
+  return addCalendarDays(local, -(local.weekday - DateTime.monday));
 }
 
 DateTime endOfIsoWeek(DateTime value) =>
-    startOfIsoWeek(value).add(const Duration(days: 6));
+    addCalendarDays(startOfIsoWeek(value), 6);
 
 int isoWeekNumber(DateTime date) {
   final day = startOfDay(date);
-  final thursday = day.add(Duration(days: 4 - day.weekday));
+  final thursday = addCalendarDays(day, 4 - day.weekday);
   final firstThursday = DateTime(thursday.year, 1, 4);
   final firstWeekStart =
-      firstThursday.subtract(Duration(days: firstThursday.weekday - 1));
+      addCalendarDays(firstThursday, -(firstThursday.weekday - 1));
   return 1 + thursday.difference(firstWeekStart).inDays ~/ 7;
 }
 
 int isoWeekYear(DateTime date) {
   final day = startOfDay(date);
-  return day.add(Duration(days: 4 - day.weekday)).year;
+  return addCalendarDays(day, 4 - day.weekday).year;
 }
 
 int weeksInIsoYear(int year) {
@@ -99,8 +99,8 @@ int weeksInIsoYear(int year) {
 
 DateTime isoWeekStart(int year, int week) {
   final jan4 = DateTime(year, 1, 4);
-  final firstMonday = jan4.subtract(Duration(days: jan4.weekday - 1));
-  return firstMonday.add(Duration(days: (week - 1) * 7));
+  final firstMonday = addCalendarDays(jan4, -(jan4.weekday - 1));
+  return addCalendarDays(firstMonday, (week - 1) * 7);
 }
 
 bool itemIsOverdue(WorkItem item, DateTime now) {
