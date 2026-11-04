@@ -11,6 +11,7 @@ import '../services/app_analytics.dart';
 import '../services/sync_service.dart';
 import '../services/timer_engine.dart';
 import '../services/top_bar_theme_bridge.dart';
+import '../utils/app_utils.dart';
 
 
 class AutoArchiveNotice {
@@ -1555,25 +1556,7 @@ class AppController extends ChangeNotifier {
     return current;
   }
 
-  int get focusDayStreak {
-    final completedDays = sessions.where((session) => session.completed).map((
-      session,
-    ) {
-      final value = session.startedAt.toLocal();
-      return DateTime(value.year, value.month, value.day);
-    }).toSet();
-    var cursor = DateTime.now();
-    cursor = DateTime(cursor.year, cursor.month, cursor.day);
-    if (!completedDays.contains(cursor)) {
-      cursor = cursor.subtract(const Duration(days: 1));
-    }
-    var streak = 0;
-    while (completedDays.contains(cursor)) {
-      streak++;
-      cursor = cursor.subtract(const Duration(days: 1));
-    }
-    return streak;
-  }
+  int get focusDayStreak => calculateFocusDayStreak(sessions, DateTime.now());
 
   Future<void> launchFloatingTimer() async => showFloatingTimer();
 
