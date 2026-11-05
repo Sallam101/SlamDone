@@ -40,7 +40,7 @@ DateTime? parseDateKey(String? value) {
   return parsed;
 }
 
-/// Counts consecutive local dates with completed, non-deleted focus sessions.
+/// Counts consecutive local dates with completed sessions in permanent focus history.
 int calculateFocusDayStreak(Iterable<TimeSession> sessions, DateTime now) {
   final completedDays = sessions
       .where(
